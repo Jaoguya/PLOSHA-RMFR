@@ -1,0 +1,132 @@
+PLOSHA-RMFR — Bullet Summary
+(short version of report.txt)
+
+
+ORIGINAL FAILURES (why run_exp1.sh wouldn't run on AWS)
+- CRLF line endings in run_exp1.sh — Windows-saved script broke on Linux bash.
+- Committed binary was macOS arm64 (Mach-O) — cannot execute on Linux at all.
+- AWS box had no C++ toolchain / no OpenSSL headers installed.
+- run_exp1.sh was untracked in git and briefly missing entirely.
+- 14 compiled binaries across all schemes were committed to git with no
+  .gitignore rule stopping it.
+
+FIXES APPLIED
+- Installed build-essential + libssl-dev on AWS; confirmed real OS is
+  Ubuntu 26.04 (not 22.04 as assumed — doesn't matter, both work).
+- Restored run_exp1.sh with LF endings; fixed CRLF in run_benchmark.sh;
+  added .gitattributes to prevent recurrence.
+- Untracked the 14 binaries, extended .gitignore.
+- Wrote run_exp_common.sh (shared preflight/build/run/verify logic) used by
+  both run_exp1.sh and new run_exp2.sh — path-independent, supports
+  EPOCHS=/FAILURE_RATE=/REBUILD=1/DEBUG=1, live-buffered logging.
+
+STATISTICS BUG (mean/std estimator)
+- Exp1's ablation had been switched to MEDIAN via a bespoke inline lambda —
+  a 3rd, duplicate implementation of "summarise epochs," inconsistent with
+  every other experiment (which use mean + population std).
+- The "std_*" columns were mislabeled: computing deviation-about-median
+  while claiming to be standard deviations — genuinely wrong, not just
+  inconsistent.
+- Confirmed fair (all 4 variants used the same estimator, so no variant was
+  advantaged) but still incorrect.
+- Fix: deleted the inline block, extended the existing shared
+  computeAverages() to cover Exp1's 6 metrics too. One estimator everywhere,
+  -74 lines. Verified: mean in results.csv matches independent per-epoch
+  recomputation exactly (6 decimals).
+
+--epochs / --failure-rate SILENTLY IGNORED
+- Passing EPOCHS=2 still ran all 30 epochs — Exp1-Exp6 each hardcoded
+  num_epochs/failure_rate AFTER copying the CLI config, discarding the flags.
+- Fix: added failure_rate_set flag so "explicitly requested" vs "left
+  default" can be told apart; removed 6 pure flag-killing overwrites; added
+  named constant EXP1_ABLATION_FAILURE_RATE=0.50 documenting why Exp1's
+  default differs from the 0.05 global default.
+- Exp7/Exp9 intentionally KEEP fixed epoch counts (their internal schedules
+  are indexed by epoch number) — documented, not silently overridden.
+- Verified on AWS: --epochs 3 now really runs 3; --failure-rate 0.10 is
+  honored and logged as such.
+
+PROVENANCE / AUDIT TRAIL WAS MISSING
+- No file recorded what produced a given results.csv — not commit, host,
+  native-vs-SGX, or effective parameters. Combined with run_benchmark.sh's
+  convention of overwriting native dirs with SGX output, native and SGX
+  numbers could get silently mixed with zero trace of which was which.
+- Fix: run_metadata.txt next to every results.csv (commit, host, platform,
+  native/SGX auto-detected via /dev/attestation, effective epochs/failure
+  rate, dataset, Paillier key size).
+- Per-epoch data was previously discarded (reset() between sweep points) —
+  no way to audit whether a reported mean/std was well-behaved.
+- Fix: epoch_records/*.csv dumps every epoch before reset(). Verified: file
+  mean = results.csv mean, exact match.
+- Status: compiled + verified, but the completed Exp1 run (see below)
+  predates this code, so it has no run_metadata.txt / epoch_records of its
+  own. Exp2's (aborted) run did pick it up.
+
+EXPERIMENT 1 — COMPLETED
+- Full 40-point run (4 variants x 10 sensor counts): ~73 minutes, verified
+  40/40 rows.
+- Found a stale, pre-fix exp1_ablation_aggregation_native/results.csv
+  already in git (old median stats, old 0.10 failure rate) that the plot
+  script prefers by default — would have silently plotted old data. Moved
+  aside (not deleted) so the fresh run is used.
+- Graph 1 regenerated correctly: PLOSHA-RMFR lowest latency at nearly every
+  point, as expected.
+
+GRAPH 1 ANOMALY (bump at 1000 and 4500 sensors)
+- Initially misjudged as noise (wrong sample-size assumption: n=30). Actual
+  n=900 per point (30 iters x 30 epochs, reset() only once per point) — at
+  that size the bump (3-5x the real standard error) is NOT noise.
+- 3 structural hypotheses tested by direct calculation, no sim reruns:
+  1. Failure-count rounding bias — real, but smooth/monotonic, not spiky.
+     RULED OUT as the bump's cause (still worth fixing separately).
+  2. Dataset periodicity — impossible; every sweep value is an exact
+     multiple of the 100 real sensors. RULED OUT.
+  3. Round-robin sensor-to-fog clustering — measured directly; imbalance
+     does NOT track the bump (4500 has LOW imbalance, 5000 has the HIGHEST
+     yet lower latency). RULED OUT.
+- Root cause still unresolved — likely RMFR threshold-logic interaction,
+  needs runtime instrumentation + a real rerun to confirm. Not attempted yet.
+- Will NOT be "fixed" by smoothing/filtering data — only legitimate fixes
+  (real code corrections) or honest error bars are on the table.
+
+OPEN ITEMS (need a decision)
+- Native vs SGX: does the paper report Exp1/Exp2 from native or Gramine-SGX
+  runs? AWS has no SGX support at all — this determines if AWS is even the
+  right host.
+- Provenance/epoch-dump code not yet baked into Exp1's completed binary —
+  rerun deferred (~74 min), current results.csv still valid.
+- Failure-count rounding bias (real, up to 5.4pp at high fog counts) not
+  yet fixed in code.
+- Error bars (std/sqrt(n)) recommended for graph1 and future plots —
+  low-cost, not yet added.
+- Experiment 2 was running (past keygen, mid epoch-loop) when the AWS
+  instance was intentionally stopped — no partial results were saved yet;
+  next run starts fresh from sweep point 1.
+- New finding (not yet actioned): workload_imbalance metric in Exp2 looks
+  degenerate — always exactly 1/num_fog_nodes rather than a real measured
+  imbalance — making it and convergence_time_epochs not meaningful as
+  currently computed. Needs a fix decision before the next Exp2 run.
+
+POST-MERGE FIXES (2026-07-22)
+- A merge committed literal git conflict markers into run_exp1.sh and
+  run_exp2.sh — both scripts were unrunnable. No other files affected; all
+  C++ fixes survived the merge.
+- run_exp1.sh: resolved to the instrumented run_exp_common.sh version.
+- run_exp2.sh: MERGED both conflict sides — README defines Exp2 as a
+  4-scheme comparison, so PLOSHA (instrumented stage) + the 3 baseline
+  stages (FT-Workflow, FedDQN, FT-Serverless) now run in one script/log,
+  with a verify step for each baseline's results.csv.
+- workload_imbalance FIXED: now computed from per-epoch ASSIGNED readings
+  (counted at submission), not from queues that aggregation already
+  drained. Consequence: with no failures (Exp2), static round-robin gives
+  a true imbalance of ~0.000 — honest, but whether the paper wants a
+  static-assignment story is a design decision.
+- Failure injection FIXED: per-node Bernoulli(rate) trials replace the
+  ceil(rate x num_fog) count (which biased realized failures by up to
+  5.4pp). Exp1/Exp3 results must be regenerated under the new model.
+- NOT done (README constraints): generate_plots.py untouched (error bars
+  still pending approval); README.md untouched (its command examples
+  contain a corrupted dataset path — flagged, not edited).
+- PENDING on AWS box (currently off): compile-verify the two C++ fixes
+  (no local compiler), move stale exp2_..._native/ aside, rerun Exp1 and
+  Exp2.

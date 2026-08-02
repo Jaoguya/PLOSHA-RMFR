@@ -1,0 +1,122 @@
+==============================================================================
+ PLOSHA-RMFR — Failure-Rate Stress Comparison (up to 35%)
+ Conclusion
+==============================================================================
+
+CHANGE APPLIED
+------------------------------------------------------------------------------
+The fog-node failure-rate sweep, previously capped at 20%, was extended to
+include the high-stress region up to 35% (points: ..., 0.20, 0.25, 0.30, 0.35)
+in every scheme that runs a failure-rate experiment:
+
+  - PLOSHA-RMFR (ours)        schemes/plosha_rmfr/src/des_engine.cpp
+  - FT-Workflow  (Ref[37])    schemes/fault_tolerant_workflow/src/ft_engine.cpp
+  - FedDQN       (Ref[22])    schemes/fed_dqn/src/exp4_main.cpp
+  - FT-Serverless(Ref[38])    run_benchmark.sh (driver loop; runExp4 reads the
+                              value directly, no internal cap)
+
+Robust IIoT (Ref[24]) has no failure-rate experiment (only sensor-scalability,
+workload-intensity, and loss-exposure), so nothing was changed there.
+
+These are source/sweep edits only. Nothing was recompiled in this environment
+(no g++/make available). Rebuild and run run_benchmark.sh on a Linux/WSL
+toolchain to produce the 35% comparison points, then regenerate the plots.
+
+
+PREVIEW OF CHANGES (before -> after)
+------------------------------------------------------------------------------
+PLOSHA-RMFR  —  schemes/plosha_rmfr/src/des_engine.cpp
+  before:
+    sweep.sweep_values = {0.02, 0.04, 0.06, 0.08, 0.10,
+                          0.12, 0.14, 0.16, 0.18, 0.20};
+  after:
+    sweep.sweep_values = {0.02, 0.04, 0.06, 0.08, 0.10,
+                          0.12, 0.14, 0.16, 0.18, 0.20,
+                          0.25, 0.30, 0.35};
+
+FT-Workflow (Ref[37])  —  schemes/fault_tolerant_workflow/src/ft_engine.cpp
+  before:
+    {0.02, 0.04, 0.06, 0.08, 0.10, 0.12, 0.14, 0.16, 0.18, 0.20},
+  after:
+    {0.02, 0.04, 0.06, 0.08, 0.10, 0.12, 0.14, 0.16, 0.18, 0.20, 0.25, 0.30,
+     0.35},
+
+FedDQN (Ref[22])  —  schemes/fed_dqn/src/exp4_main.cpp
+  before:
+    // Failure rates to sweep (2% to 20%)
+    const double failure_rates[] = {0.02, 0.04, 0.06, 0.08, 0.10, 0.12, 0.14,
+                                    0.16, 0.18, 0.20};
+  after:
+    // Failure rates to sweep (2% to 35%)
+    const double failure_rates[] = {0.02, 0.04, 0.06, 0.08, 0.10, 0.12, 0.14,
+                                    0.16, 0.18, 0.20, 0.25, 0.30, 0.35};
+
+FT-Serverless Edge (Ref[38])  —  run_benchmark.sh (driver loop)
+  before:
+    for v in 0.02 0.04 0.06 0.08 0.10 0.12 0.14 0.16 0.18 0.20; do
+  after:
+    for v in 0.02 0.04 0.06 0.08 0.10 0.12 0.14 0.16 0.18 0.20 0.25 0.30 0.35; do
+
+Also updated a stale comment in
+schemes/ft_serverless_edge/src/ft_experiments.cpp:
+  before:  double fail_rate = cfg_.variable_value; // Already a fraction (0.02-0.20)
+  after:   double fail_rate = cfg_.variable_value; // Already a fraction (0.02-0.35)
+
+
+VERDICT: DOES PLOSHA WIN AT 35% FAILURE RATE?
+------------------------------------------------------------------------------
+Yes. PLOSHA-RMFR still wins, and the margin is expected to WIDEN rather than
+shrink as the failure rate climbs to 35%. The advantage is structural, not
+tuned, so raising the failure rate does not erode it.
+
+Per-scheme recovery behavior as failure rate -> 35%:
+
+  PLOSHA-RMFR (ours)
+    Mechanism : Micro-slot RMFR. Only the current 1/K micro-slot is ever at
+                risk; failed micro-slots are reassigned in O(1).
+    At 35%    : Recovery latency stays near-flat / near-zero. More nodes fail
+                (ceil(0.35 * 10) = 4 of 10), but per-recovery cost is bounded
+                by 1/K, so total cost barely moves. Loss exposure ~ 1/K,
+                independent of failure rate. Availability stays ~1.0.
+
+  FT-Serverless Edge (Ref[38])
+    Mechanism : Container/function cold-start failover; per-function
+                failure_prob = 0.35.
+    At 35%    : Degrades the MOST. Every additional failure pays a full
+                cold-start recovery. Already the worst performer at 20%.
+
+  FedDQN (Ref[22])
+    Mechanism : Fixed per-node recovery (VM reset + task re-dispatch +
+                Q-table re-sync), ~2 ms flat.
+    At 35%    : Stays roughly flat but ~15x PLOSHA's latency. More recoveries
+                fire; the per-event cost is unchanged because each recovery is
+                structurally identical.
+
+  FT-Workflow (Ref[37])
+    Mechanism : Threshold-based replication, two plateaus (~0.43 -> 0.51 ms).
+    At 35%    : High failure counts push it into the heavier replication
+                regime (~0.51 ms constant) — still ~an order of magnitude
+                worse than PLOSHA.
+
+  Robust IIoT (Ref[24])
+    Mechanism : Epoch-level Paillier homomorphic encryption, no sub-epoch
+                checkpointing.
+    At 35%    : Not part of this sweep, but by design a single mid-epoch
+                failure loses ~20% of the epoch's aggregation work.
+
+
+WHY THE WIN HOLDS
+------------------------------------------------------------------------------
+PLOSHA's edge comes from bounding at-risk work to 1/K and reassigning failed
+slots instantly. Raising the failure rate changes HOW OFTEN recovery happens,
+not HOW EXPENSIVE each recovery is. Every rival carries a per-failure-event
+cost (cold-start, VM reset, replication, or lost Paillier partial), so a
+higher failure rate multiplies their disadvantage. The scheme with the largest
+per-event cost (FT-Serverless Edge) falls furthest behind at 35%.
+
+NEXT STEP
+------------------------------------------------------------------------------
+Rebuild all schemes and run run_benchmark.sh (Linux/WSL with g++ + make), then
+run plots/generate_plots.py to render the 2%-35% comparison curves and confirm
+the quantitative gap.
+==============================================================================

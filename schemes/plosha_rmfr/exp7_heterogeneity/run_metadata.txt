@@ -1,0 +1,17 @@
+experiment: heterogeneity imbalance (Exp10)
+timestamp_utc: 2026-07-27T15:18:09Z
+git_commit: 431d719-dirty
+hostname: ip-172-31-17-252
+platform: Linux 7.0.0-1008-aws x86_64
+execution_mode: native
+epochs: 30
+failure_rate: 0 (default)
+dataset: /home/ubuntu/PLOSHA-RMFR/dataset/plosha_dataset.csv
+paillier_key_bits: 2048
+fog_nodes: 20
+sensors: 2000
+heterogeneity_ratios: 1,2,4,6,8,10
+heterogeneity_dimensions: queue capacity; processing-latency headroom (inverse of capacity); communication latency (permuted node index, decorrelated from capacity), mean 5.000000 ms
+iterations_per_point: 10
+variants: static_assignment,capacity_aware
+imbalance_metric: capacity-normalized CV (W_i = load_share/capacity_share)

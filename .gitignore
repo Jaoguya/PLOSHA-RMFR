@@ -1,0 +1,21 @@
+__pycache__/
+*.pyc
+*.o
+*.exe
+*.manifest
+*.manifest.sgx
+*.sig
+.DS_Store
+desktop.ini
+
+# Compiled experiment binaries. These are platform-specific: a macOS arm64
+# build committed here cannot execute on the Linux x86-64 benchmark hosts.
+# Build from source via each scheme's Makefile instead.
+schemes/*/src/plosha_rmfr
+schemes/*/src/ftworkflow
+schemes/*/src/ft_serverless_sim
+schemes/*/src/exp*_*
+schemes/*/src/exp9_sim
+src/crypto/tests/test_ecdsa
+src/crypto/tests/verify_paillier_ssl
+logs/

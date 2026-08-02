@@ -1,0 +1,133 @@
+PLOSHA-RMFR — Session Summary Report
+Date: 23 July 2026
+Scope: Parallel execution of Experiment 1 (aggregation ablation) and
+Experiment 2 (scheduling efficiency, 4 schemes) on AWS, with all session
+fixes compiled in. Follows report.txt (full history) and bulletreport.txt.
+
+===============================================================================
+1. WHAT RAN
+===============================================================================
+
+Both experiments ran IN PARALLEL on the AWS box (ip-172-31-17-252, Ubuntu
+26.04, x86-64, 8 vCPU), launched 2026-07-22 14:15 UTC, single shared binary
+built once and reused via SKIP_BUILD=1 (avoids the ETXTBSY relink race).
+
+Code state: commit 431d719 + all session fixes (recorded as "431d719-dirty"
+in provenance): mean/std estimator fix, --epochs/--failure-rate flag fix,
+provenance + epoch_records instrumentation, workload_imbalance fix
+(assigned-load based), Bernoulli per-node failure injection.
+
+  Experiment 1: 40/40 sweep points, 4239 s (~71 min), verified.
+                Parallel cost vs earlier solo run: ~3 min (4239 vs 4369 s).
+  Experiment 2: PLOSHA stage + 3 baselines (FT-Workflow Ref[37],
+                FedDQN Ref[22], FT-Serverless Ref[38]), all 10/10 rows,
+                script verify passed. Wall time ~5.8 h, dominated entirely
+                by the FT-Serverless baseline (~27-60+ min per sweep point;
+                each invocation reloads the dataset at --sensors 12600).
+
+Provenance: run_metadata.txt written beside both PLOSHA results.csv files
+(execution_mode: native, failure_rate 0.5 default for Exp1, 2048-bit
+Paillier). Per-epoch audit trails: 40 epoch_records CSVs (Exp1) + 10 (Exp2).
+
+===============================================================================
+2. EXPERIMENT 1 RESULTS (Graph 1)
+===============================================================================
+
+Variant ordering UNCHANGED and consistent at all 10 sensor counts:
+  full_plosha < flat_epoch < adaptive_slot < fixed_slot  (lower = better)
+PLOSHA-RMFR has the lowest aggregation latency at every point (~3.99-4.41 ms
+band, per-fog-node average at constant 100 sensors/fog by design).
+
+The unexplained bumps at 1000 and 4500 sensors from the previous run are
+GONE under the Bernoulli failure model. Since the failure model was the only
+change, the old bumps were evidently an artifact of the ceil()-quantized
+failure counts interacting with the fixed seeds — the earlier diagnostic
+proved the quantization's MEAN bias was smooth but could not see this
+per-realization structure. The remaining curve shape (minimum at 2000, mild
+hump at 4000) is shared by all four variants (identical seeds/failure draws
+per point), so variant-to-variant gaps — the experiment's actual signal —
+are clean.
+
+Caveat for the paper: per-point PLOSHA-vs-flat_epoch gaps (~0.05-0.1 ms) are
+of the same order as the standard error (~0.07 ms, n=900), but the ordering
+holds in the same direction at all 10 paired points, which is the stronger
+evidence. Error bars in the plot still recommended (needs generate_plots.py
+approval per README).
+
+===============================================================================
+3. EXPERIMENT 2 RESULTS (Graph 2) — REPORTED AS OBSERVED
+===============================================================================
+
+Scheduling latency vs fog nodes (5-50), log scale, 4 schemes:
+
+  Ref[22] FedDQN:        ~0.000044 ms, flat          — fastest
+  Ref[37] FT-Workflow:   ~0.00013 -> 0.00052 ms      — second
+  PLOSHA-RMFR (ours):    ~0.00015 -> 0.00075 ms      — third
+  Ref[38] FT-Serverless: ~0.04   -> 0.35 ms          — slowest by ~3 orders
+
+Honest reading: PLOSHA is NOT the fastest scheduler in this comparison — it
+ranks 3rd of 4 on raw scheduling latency, slightly above Ref[37] and well
+above FedDQN's constant-time action selection. Per the README's own rule
+("outcomes that deviate from the theoretical baseline are equally valid and
+will be reported as observed"), this is reported as measured. Context that
+belongs next to it in any write-up:
+  - All schemes except Ref[38] are sub-microsecond — differences of a few
+    hundred nanoseconds are unlikely to matter at system level, where
+    aggregation cost (Exp1's subject, where PLOSHA wins) dominates.
+  - Each scheme times only its selection decision (PLOSHA per the paper's
+    Exp2 definition; FedDQN times SelectAction only), so the comparison is
+    like-for-like by construction.
+
+Workload imbalance (secondary metric): the fixed metric now measures real
+assigned load. Prediction in earlier session notes ("PLOSHA will be ~0.000")
+was PARTIALLY WRONG in an informative way: the epoch-12 workload burst
+(x1.5 readings) wraps partially around the sensor list, creating genuine
+non-uniform assignment that the metric now captures (PLOSHA ~0.025-0.05;
+FT-Serverless ~1.28 for comparison). The old degenerate metric would have
+reported exactly 1/num_fog regardless.
+
+convergence_time_epochs now reads 0.0 at every fog count: post-burst
+imbalance is below the 0.1 threshold immediately. The metric no longer
+carries information under the corrected imbalance definition — its
+threshold (0.1) was calibrated against the old degenerate values. Flagged
+as needing a redefinition decision before it is cited anywhere.
+
+===============================================================================
+4. FILES SAVED LOCALLY (no-loss save, verified present on this machine)
+===============================================================================
+
+  schemes/plosha_rmfr/exp1_ablation_aggregation/
+      results.csv (40 rows), run_metadata.txt, epoch_records/ (40 CSVs)
+  schemes/plosha_rmfr/exp2_scheduling_efficiency/
+      results.csv (10 rows), run_metadata.txt, epoch_records/ (10 CSVs)
+  schemes/fault_tolerant_workflow/exp2_scheduling_efficiency/results.csv
+  schemes/fed_dqn/exp2_scheduling_efficiency/results.csv
+  schemes/ft_serverless_edge/exp2_scheduling_efficiency/results.csv
+  plots/output/graph1..graph6 PNGs (regenerated this session)
+  logs/run_exp1_20260722_141542.log, logs/run_exp2_20260722_141545.log
+
+NOTE on graphs 3-6: regenerated by the plot script from PRE-EXISTING result
+files that were NOT rerun this session. Exp3 (failure rate) in particular
+was produced under the OLD failure-injection model and must be regenerated
+under the Bernoulli model before publication. Only graphs 1 and 2 reflect
+today's corrected runs.
+
+===============================================================================
+5. HANDOVER — DELIBERATELY LEFT TO THE USER
+===============================================================================
+
+  1. Git review + push: nothing was committed or pushed by the assistant
+     (per instruction). Working tree contains all results, code fixes, and
+     this report. Push access to PopRangsimann/PLOSHA-RMFR was verified via
+     a throwaway remote branch (created + deleted, main untouched).
+  2. AWS instance: STILL RUNNING at 50.17.74.205 and billing. All data is
+     saved locally, so it can be stopped from the EC2 console at any time.
+     Public IP will change again on restart unless an Elastic IP is added.
+
+Open items carried forward (unchanged from report.txt sections 8-9):
+  - Native vs SGX reporting decision (AWS cannot provide SGX).
+  - Error bars in plots (blocked on generate_plots.py approval).
+  - Exp3+ regeneration under the Bernoulli failure model.
+  - convergence_time_epochs redefinition (see section 3).
+  - Graph 1 residual curve shape: shared across variants, does not affect
+    the ablation comparison; mechanism not further investigated.

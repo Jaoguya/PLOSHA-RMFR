@@ -1,0 +1,1708 @@
+IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 19, NO. 1, JANUARY/FEBRUARY 2026
+295
+Efﬁcient and Fault Tolerant Data Stream Processing
+With Uncertain Data Rates in Serverless Edge
+Computing
+Zichuan Xu
+, Member, IEEE, Peichen Liu
+, Graduate Student Member, IEEE, Qiufen Xia
+, Member, IEEE,
+Weifa Liang
+, Fellow, IEEE, Guangyuan Xu
+, Wenzheng Xu
+, Member, IEEE,
+Pan Zhou
+, Senior Member, IEEE, and Hao Li
+Abstract—Data stream processing is a functionality of various
+AI applications to obtain continuous insights fromdata streams.
+Serverless edge computing (SEC) is a key solution for implementing
+data stream processing requests by deploying serverless functions
+into cloudlets. However, existing data stream processing methods
+focus more on processing delay, ignoring fault tolerance and com-
+plex dependencies among functions, resulting in critical events
+being missed in the event of any fault and processing inefﬁciency.
+Besides, due to the uncertainty of data streams, existing function
+deployment methods may not be suitable for their newly changed
+data rates, causing resource waste or shortages. To address these
+problems, we ﬁrst propose an optimization framework to enable
+efﬁcient and fault tolerant function deployment, such that the delay
+of data stream processing is minimized while meeting its fault tol-
+erant requirements and resource capacity constraints of cloudlets
+in an SEC network. We then design an online learning algorithm
+that predicts data rate changes through a multi-timescale machine
+learning method and proactively adjusts instance locations and
+numbers to absorb data rate uncertainty. Experimental results in a
+real test-bed show that our proposed algorithms outperform their
+counterparts by 13.5% on the average delay and 26.3% on the
+average fault tolerance.
+Received 22 December 2024; revised 16 October 2025; accepted 14 De-
+cember 2025. Date of publication 23 December 2025; date of current version
+5 February 2026. The work of Zichuan Xu and Qiufen Xia was supported in
+part by the National Natural Science Foundation of China (NSFC) under Grant
+62172068 Grant 62172071, in part by Shandong Provincial Natural Science
+Foundation under Grant ZR2023LZH008, Grant ZR2023LZH013, and Grant
+ZR2023LZH016, in part by the joint research project with China Coal Research
+Institute under Grant 2022-3-KJHZ003, and in part by the CCF-Ant Research
+Fund. (Corresponding author: Wenzheng Xu.)
+Zichuan Xu and Guangyuan Xu are with the School of Software, Dalian
+University of Technology, China (e-mail: z.xu@dlut.edu.cn; 32017112@mail.
+dlut.edu.cn).
+Peichen Liu and Qiufen Xia are with the International School of Informa-
+tion Science and Engineering, Dalian University of Technology, China, and
+also with the Key Laboratory for Ubiquitous Network and Service Software
+of Liaoning Province, Dalian 116024, China (e-mail: liupeichen@mail.dlut.
+edu.cn; qiufenxia@dlut.edu.cn).
+Weifa Liang is with the Department of Computer Science, City University of
+Hong Kong, China (e-mail: weifa.liang@cityu.edu.hk).
+Wenzheng Xu is with the Department of Computer Science, Sichuan Univer-
+sity, Chengdu 610000, China (e-mail: wenzheng.xu@scu.edu.cn).
+Pan Zhou is with the School of Cyber Science and Engineering, Huazhong
+University of Science and Technology, Wuhan 430074, China (e-mail:
+panzhou@hust.edu.cn).
+Hao Li is with the Institute of Software, China Coal Research Institute, Beijing
+100013, China (e-mail: hateif@163.com).
+This
+article
+has
+supplementary
+downloadable
+material
+available
+at
+https://doi.org/10.1109/TSC.2025.3647054, provided by the authors.
+Digital Object Identiﬁer 10.1109/TSC.2025.3647054
+Index
+Terms—Serverless
+edge
+computing,
+data
+stream
+processing, uncertain data rate, online learning.
+I. INTRODUCTION
+D
+RIVEN by the widespread adoption of Internet of Things
+(IoT) services [1] and the increasing reliance on AI
+services [2], data stream processing applications have gained
+prominence in domains of ﬁnance, telecommunications, health-
+care,logistics,andetc.Theseapplicationsrequireextremely-low
+delays to guarantee timely processing and response to data
+stream processing requests for effective decision-making. For
+instance, in ﬁnance, real-time analysis of market data streams is
+crucial for making split-second investment decisions. However,
+in data stream processing applications, there are faulty events,
+including semantic anomalies or rule conﬂicts. Thus, the tolera-
+bility to faulty events of such stream processing applications is
+another vital requirement for users. Fault tolerance requirements
+refer to maintaining the data stream processing continuity with
+faulty events, and ensuring the recoverability of the processing.
+Failing to meet the fault tolerance requirement may interrupt the
+continuously processing of data streams, thereby missing critical
+events hidden in data streams [3]. For example, in industrial
+equipment monitoring, if fault tolerance can not be met, critical
+data may be missed, causing production interruptions [4].
+Mobile edge computing (MEC) empowered by the technique
+of serverless is emerging as the key technology for data stream
+processing [5]. Based on the Function-as-a-Service (FaaS),
+serverless edge computing (SEC) abstracts away the complexity
+of resource and allows applications to be provided in code-
+level functions, enabling efﬁcient and fault tolerant data stream
+processing [6]. Speciﬁcally, the cloud service provider of an
+SEC network usually deploys agile and lightweight serverless
+functions in cloudlets within the proximity of users to implement
+their data stream requests. As such, the delay experienced by
+users is reduced by implementing data stream processing in
+an SEC network. Besides, through the active standby failover
+mechanism, the SEC network can deploy lightweight standby
+instances to meet fault tolerance requirements, as the active
+functions can quickly switch to standby instances when a fault
+occurs.
+The current function deployment technique of MEC or server-
+less computing may not solely guarantee the efﬁciency and
+fault tolerant requirements of data stream processing requests.
+Serverless computing in data centers may easily provide enough
+standby instances using abundant computing resources [7].
+1939-1374 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artiﬁcial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:58:40 UTC from IEEE Xplore.  Restrictions apply. 
+296
+IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 19, NO. 1, JANUARY/FEBRUARY 2026
+However, conventional MEC networks may not ensure fault tol-
+erant data stream processing, due to their capacitated resources
+and the fact that an MEC network may not provide enough
+standby instances for all requests. Thus, directly application of
+such methods to an SEC network may easily cause resource
+violations [8]. Once the failure of a single function, the whole
+application will malfunction if there is no standby instance,
+resulting in higher recovery delays and inefﬁcient function
+processing. Besides, the data rate of data stream processing
+applications is uncertain. The uncertain data streams may lead
+to changes in resource requirements, and pre-placed serverless
+functions may not be able to adapt to the new resource require-
+ments. Therefore, we need to proactively adjust the number and
+locations of standby instances, thereby improving the efﬁciency
+and fault tolerance of serverless functions with uncertain data
+rates.
+Speciﬁcally, enabling efﬁcient and fault tolerant data stream
+processing in SEC networks poses fundamental challenges.
+First, the serverless functions of each data stream processing
+request have complexly dependencies. For example, an au-
+tonomous driving service may need an AI pipeline consisting of
+sensingdatafromradar,image,vehiclestatus,andinferences[9].
+Due to complex dependencies of code-level functions may
+incur the high delay during data stream processing if the lo-
+cations of the functions are not carefully deployed. Therefore,
+considering the dependencies of functions, it is challenging to
+implement efﬁcient data stream processing via careful function
+placements. Second, the fault tolerance is a key factor to guar-
+antee the availability of data stream processing services. For
+example, in healthcare services on heart diseases or respiratory
+diseases, any failure or delay in the processing of their stream
+data may lead to a late diagnosis of a critical disease. The
+highly distributed and constrained resources of the SEC network
+further complicate the recovery from faulty functions, because
+the number of standby instances may not be enough to satisfy
+fault tolerant requirements of requests due to resource availabil-
+ity [10]. Therefore, given the distributed and limited resources of
+anSECnetwork,itischallengingtoselectanappropriatenumber
+of standby instances for each function. Third, the data rate of
+each data stream processing request may have uncertainty and
+ﬂuctuate over time. The pre-allocated functions may not be able
+to meet changing data rates. Speciﬁcally, it is necessary to design
+a suitable data rate prediction algorithm to dynamically predict
+changes in the data rate and relocate standby instances to avoid
+resource shortage or waste. However, due to the periodic nature
+of data rate changes, it is challenging to accurately predict data
+using traditional prediction methods, which poses a challenge
+for the relocation of proactive functions.
+However, most existing studies either ignored dependencies
+among serverless functions [11], or did not consider fault toler-
+ant requirements of each data steam requests [12], [13]. Also,
+there are rarely studies that take data rate uncertainty of data
+stream processing into consideration in SEC networks [14],
+[15]. To address the above-mentioned challenges, we consider
+the problem of data stream processing with uncertain data rates
+in an SEC network, by minimizing the delay while meeting
+the fault tolerant requirement of users. We ﬁrst investigate the
+problem of the efﬁcient and fault tolerant function placement
+for data stream processing requests in an SEC network, by
+considering both fault tolerant requirements of requests and
+resource capacitated constraints of cloudlets. We then study the
+problem of proactive data stream processing request adjustment
+by re-locating serverless functions with different resources.
+The main contributions of this paper are as follows.
+r We ﬁrst design an optimization framework for implement-
+ing data stream processing requests with given data rates
+to determine the appropriate number of standby instances
+and ﬁnd locations of serverless function and their standby
+instances for each function in the SEC network, such
+that the delay is minimized while satisfying fault tolerant
+requirements of each request and resource constraints of
+cloudlets in an SEC network.
+r Consider that the data rates of data stream requests are
+dynamically changing and uncertain, we propose a multi-
+timescale machine learning-based online algorithm to pre-
+dict changes in data rates and proactively adjust the number
+and locations of existing standby instances of serverless
+functions, such that the changes of uncertain data rates can
+be absorbed.
+r We evaluate the performance of the proposed algorithms
+based on a real test-bed and real-world datasets and results
+show that our algorithms outperform existing works by
+13.5% on the average delay and 26.3% on the average fault
+tolerance.
+The rest of the paper is arranged as follows. Section II reviews
+related studies. Section III introduces the system model and
+problem deﬁnitions. Section IV proposes an optimization frame-
+work for the problem of fault tolerant function placement with
+given data rates. Section V devises an online learning algorithm
+for the proactive data stream request adjustment problem with
+uncertain data rates. Section VI evaluates the performance of
+the proposed algorithms experimentally with a real test-bed and
+real-world datasets. Section VII concludes the paper.
+II. RELATED WORK
+Data stream processing is a fundamental functionality of
+various stream processing applications. Various systems, archi-
+tectures and algorithms in serverless computing are designed
+to enable efﬁcient data stream processing [16], [17], [18]. For
+example, Song et al. [17] designed a new stream processing
+serverless system that enables fast reactive scaling of stream
+queries. These studies however focus on enabling the efﬁciency
+of data stream processing in data centers with abundant re-
+sources. Direct implementation of such methods into MEC
+networks may not guarantee the performance of data stream
+processing, because cloudlets may not have enough resources
+to process data streams.
+Enabling data stream processing in MEC networks has at-
+tracted attention in the past few years [8], [12], [19], [20], [21].
+For example, Liu et al. [8] proposed a scalable and adaptive
+stream processing method in an MEC network, to handle con-
+current IoT queries in the network. Fu et al. [21] proposed a new
+framework for edge stream processing with a congestion-aware
+scheduler. However, the above-mentioned works did not con-
+sider an SEC network that implements data stream processing
+via provisioning a set of serverless functions.
+SEC can effectively provide highly-available edge resources
+for data stream processing applications in code-level func-
+tions [10], [18]. Existing studies on SEC mainly focused on
+generic applications, by reducing the cold start delay and im-
+proving the resource utilization of edge nodes [11], [22], [23],
+[24]. However, none of them focus on data stream processing
+in SEC networks. For instance, Roy et al. [22] proposed a
+technique to reduce time costs by strategically warming up a
+serverless function based on its time-varying probability of the
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:58:40 UTC from IEEE Xplore.  Restrictions apply. 
+XU et al.: EFFICIENT AND FAULT TOLERANT DATA STREAM PROCESSING WITH UNCERTAIN DATA RATES IN SERVERLESS EDGE COMPUTING
+297
+TABLE I
+COMPARISON OF EXISTING WORKS AND OUR WORK
+TABLE II
+NOTATIONS AND DEFINITIONS
+next invocation. Kaffeis et al. [24] devised an efﬁcient algorithm
+to schedule serverless functions in server clusters. Besides, none
+of these works considered the fault tolerance problem incurred
+by serverless function failures.
+Fault tolerance is an important method to ensure high avail-
+ability of services [25]. Existing works have initially addressed
+the problem of fault tolerance in serverless architecture by
+proposing algorithms or systems [7], [26], [27], [28]. Most of
+such investigations are not performed in the context of SEC
+networks. Besides, most of these proposed methods are not
+particularly designed for data stream processing. For example,
+Qi et al. [27] proposed a serverless system for fault-tolerant
+statefulserverlesscomputing, byleveragingasymmetriclogging
+as a foundation. Zhang et al. [7] proposed a system for fault
+tolerant stateful serverless workﬂows. Barrak et al. [28] intro-
+duced a peer-to-peer serverless architecture with fault tolerance
+mechanism for AI model training.
+To sum up, although existing studies have proposed various
+methods to separately optimize data stream processing, function
+effectiveness, and fault tolerance, there are no works that can
+address efﬁcient and fault-tolerant data stream processing in
+SECnetworks.Besides,existingworksdonotconsideruncertain
+data rates. In this work, we consider the problem of data stream
+processing with uncertain data rates in an SEC network, by
+adopting active-standby failover mechanisms and minimizing
+the delay while meeting the fault tolerant requirement. The
+comparison of existing works and our work is shown in Table I.
+III. PRELIMINARIES
+In this section, we introduce the system model, notions and
+notations, and deﬁne the optimization problems precisely. All
+the symbols used in this paper are listed in Table II.
+A. System Model
+We consider an SEC network G = (V, E) operated by a
+cloud-native service provider, with a set V of cloudlets providing
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:58:40 UTC from IEEE Xplore.  Restrictions apply. 
+298
+IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 19, NO. 1, JANUARY/FEBRUARY 2026
+Fig. 1.
+An example of implementing data stream processing in an SEC
+network.
+services within the proximity of users, and a set E of backhaul
+links/paths interconnect the cloudlets. Fig. 1 shows an example
+of the SEC network. Each cloudlet clj ∈CL usually consists
+of several servers or accelerators, and is either attached to an
+access point or located in the backhaul of the SEC network.
+Due to the space limitation of each edge location, a cloudlet
+usuallyhasacertainamountofresourcestoprocessdatastreams.
+We consider that the resources of each cloudlet are virtualized
+using cloud-native technologies, and offered to users in terms of
+serverless functions. According to the popular serverless plat-
+forms [29], [30], we assume that the memory resource is the key
+resource type demanded by serverless functions. Speciﬁcally,
+each cloudlet clj has memory capacity for executing tasks in
+serverless functions, which is denoted by C(clj).
+B. Data Stream Processing in an SEC Network
+Nowadays, many AI applications, such as autonomous driv-
+ing, trafﬁc monitoring, virtual reality, and augmented reality,
+require continuous data stream processing. For instance, in an
+autonomous driving system, the trafﬁc events captured by vehi-
+cles need to be processed timely such that the system can make
+real-time decisions [9], [31]. Further, in an AR application, the
+video stream captured by an AR headset needs to be processed
+timely, such that virtual objects can be augmented into the stream
+in no time [32], [33]. Considering the wide existence of data
+stream processing in many applications, many production-level
+data analytic systems, such as Apache Kafka [34] or Flink [35],
+etc., support data stream processing. In such systems, users issue
+requests to process data streams of their applications. Let rm be a
+data stream processing request in an SEC network, which can be
+implemented in serverless functions that are submitted directly
+to the SEC network.
+Serverless-enabled requests are implemented in code-level
+functions that are independent on each other. Therefore, a data
+stream processing request rm is represented by a Directed
+Acyclic Graph (DAG) [24], [36] with nodes representing server-
+less functions and edges denoting the data ﬂows among the
+serverless functions. Let G′
+m = (V ′
+m, E′
+m) be such a DAG of
+serverless functions, where V ′
+m is the set of serverless functions
+of rm and E′
+m is the set of data ﬂows among the serverless
+functions of rm. There is a source function and a sink function,
+and the data stream originates from the source function and
+terminates at the sink function, which are denoted by sm and
+tm, respectively. Denote by fl a function in V ′
+m, which needs to
+process the data streams that are passed on by its predecessor in
+DAG G′
+m.
+C. Uncertain Data Rates of Data Stream Processing Requests
+Thedatastreamofadatastreamprocessingrequestrm istime-
+varying and depends on many factors, such as the stability of data
+sources, the environment, and the network bandwidth [37]. For
+Fig. 2.
+An example of the placement of a data stream processing request into
+an SEC network.
+example, in a medical monitoring system, human digital twins
+continuously collect the data of patients and update their data
+stream of the health situation timely. We thus deﬁne the rate
+of the data stream arrivals as data rate. Assuming that time is
+equally divided into equal slots, the data rate of rm is deﬁned as
+the volume of data arriving into the system per time unit in time
+slot τ. Let ρm,τ be the data rate of the request rm in τ. Although
+the data rate of a data stream processing request can be obtained
+on its arrival, the future data rates in subsequent time slots may
+be uncertain. Therefore, the placement of the functions of each
+data stream processing request needs to be proactive, such that
+the data stream processing request does not need to be migrated
+frequently due to changes in data rate. Without loss of generality,
+we assume that the memory resource required to implement a
+data stream processing request rm is proportional to its data rate,
+i.e., γ · ρm,τ, where γ is the unit of memory resource allocated to
+process a unit data rate. Fig. 2 shows an example of a data stream
+processing request and its implementation in an SEC network.
+D. Fault Tolerant Requirements of Data Stream Processing
+Requests
+Faults can occur anywhere and at anytime in a network
+due to natural disasters at the locations of cloudlets, software
+malfunctions in the system, hardware failures, and etc. In SEC
+networks, the fault tolerance is crucial to guarantee the timely
+and continuous processing of data streams, considering that
+serverless functions usually execute a small piece of code
+with complex dependencies. Active-standby failover mecha-
+nisms [38] are usually adopted to avoid the failures of function
+execution. In an active-standby failover, an active function of
+data stream processing request rm is placed into a cloudlet, and
+a few standby instances of the function are placed into other
+cloudlets [39]. Note that the number of standby instances of
+each function guarantees the fault-tolerant requirements and the
+efﬁciency of the system. Too many standby instances may lead
+to a high maintenance cost, while too few standby instances may
+not be able to respond to failures proactively.
+Each data stream processing request rm needs 1 + nm in-
+stances for each function of its DAG G′
+m to guarantee its fault
+tolerant requirement, with one active instance and nm standby
+instances. We assume that 1 + nm ≤|V |, that is, the number of
+standby instances of each function is no greater than the number
+of cloudlets in the SEC network. The rationale behind this is that
+there is at most an active function or a standby instance for each
+function in each cloudlet. The value of nm determines the fault
+tolerance of each function of data stream processing request rm.
+Denote by pl failure probability of function fl. Notice that pl can
+be predicted by machine learning algorithms [40]. Let Pr(fl)
+be the probability of at least one instance of function fl is fault
+tolerant, then, Pr(fl) = 1 −(pl)nm+1. To ensure the quality of
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:58:40 UTC from IEEE Xplore.  Restrictions apply. 
+XU et al.: EFFICIENT AND FAULT TOLERANT DATA STREAM PROCESSING WITH UNCERTAIN DATA RATES IN SERVERLESS EDGE COMPUTING
+299
+data stream processing, we consider each request rm has a fault
+tolerant requirement δm given a priori in [38], we have
+Πfl∈V ′mPr(fl) ≥δm.
+(1)
+Note that a large number of standby instances determined by
+nm may lead to higher resource consumption and consequent
+resource violations. Thus, the value of nm needs to make a trade-
+off between fault tolerant requirements and resource constraints.
+E. Delay Model
+The delays experienced by a data stream processing request
+rm consist of the processing delay by functions of rm, transmis-
+sion delays among the functions, and the recovering delays of
+from a failed function to a standby instance.
+The processing delay of data stream processing request rm
+mainly depends on both its data rate and the memory resource
+allocated to itself [41]. The reason is that with more memory
+resource allocated to rm, more data can be loaded to the mem-
+ory at the same time, and thus reducing the overhead due to
+memory management overhead. Denote by Mj the amount of
+memory allocated by cloudlet CLj to process a unit data rate.
+The inﬂuence factor that captures cloudlet CLj’s impact on
+memory allocation on the processing delay is αj. Besides, the
+processing delay includes cold start delay, which is related to
+whether the current cloudlet has idle function instances. We use
+a binary variable xm,l,j,τ to represent whether function fl of
+rm is assigned to cloudlet CLj in time slot τ. On one hand,
+if there are no idle function instances, a function of rm has
+to been instantiated. Consequently, a cold-start delay has to be
+included in the processing delay. Let do
+l,j be the cold-start delay
+incurred by instantiating a function fl in CLj. Note that the
+cold-start delay can be given a priori constant by periodic time
+series prediction methods [42]. On the other hand, there may be
+someidlefunctioninstances.Wethususeanotherbinaryvariable
+x′
+m,l,j,τ to show whether function fl of rm is newly-instantiated
+in CLj in time slot τ (x′
+m,l,j,τ = 1) or is assigned to an existing
+function instance (x′
+m,l,j,τ = 0). Let dproc
+m,l,j,τ be the processing
+delay by a function fl of rm in CLj at τ, then,
+dproc
+m,l,j,τ = xm,l,j,τ · αj · Mj · ρm,τ + x′
+m,l,j,τ · do
+l,j.
+(2)
+The transmission delay of the data stream processing request
+rm is incurred by the execution path of functions in its DAG.
+There exist multiple execution paths in DAG G′
+m of rm from its
+source function sm to sink function tm. Let P′ be the execution
+paths from source function sm to the sink function tm in G′
+m,
+and p′ be one of such paths. Denote by p and P a path in the SEC
+network to which the execution path p′ in G′
+m is mapped and the
+set of such paths, respectively. Let ps be a segment of p, and the
+number of functions in the execution path p′ of Gf is |p′|. We use
+a indicator variable zp′,p,τ to indicate whether p′ ∈P′ is mapped
+to p ∈P in time slot τ. The sum of processing and transmission
+delays of rm in τ is the maximum delay of the execution paths
+in P′ incurred by the processing of functions and transmission
+of data streams in paths of P, which is denoted by dpt
+m,τ, then,
+dpt
+m,τ = max
+p′∈P′
+
+p∈P
+zp′,p,τ ·
+⎛
+⎝
+fl∈p′
+
+CLj∈p
+dproc
+m,l,j,τ
++
+|p′|−1
+
+l=1
+
+ps⊆p
+xm,l,φ(ps),τ · xm,l+1,ψ(ps),τ
+
+e∈ps
+ρm,τ · de
+⎞
+⎠,
+(3)
+where φ(ps) is the starting point of path ps, and ψ(ps) is the
+ending point of ps.
+When an active function fails, it needs to be switched to
+a standby instance. The delay during such a process is the
+recovering delay [43]. Let P′
+l be the paths in DAG G′
+m that
+involves function fl. If fl is switched to its standby instance, all
+the execution paths in P′
+l will be affected. That is, given a path
+p′ ∈P′
+l, the predecessor of fl in p′ needs to forward its processed
+data stream to the new cloudlet of fl’s standby instance. Besides,
+sinceweconsiderstatefulserverlessfunctions,suchasprocessed
+states, connection states, etc., it needs to forward the states
+generated to the new destination for later use. We assume that
+each serverless function maintain a state buffer for the states
+generated by each function. Let κm be the size of the state buffer
+for each function of data stream processing request rm. Denote
+by pl,τ the switching path from time slot τ −1 to time slot τ.
+The recovering delay drec
+m,τ if a failed function is switched to a
+standby instance in a different cloudlet at τ, we have
+drec
+m,τ =
+
+fl∈V ′m
+yl,τ · κm
+
+e∈pl,τ
+de,
+(4)
+where yl,τ indicates that whether fl is switched to a standby
+instance in a new cloudlet in time slot τ. Therefore, the delay
+experienced by a data stream processing request rm is
+dm,τ = dpt
+m,τ + drec
+m,τ.
+(5)
+F. Problem Deﬁnitions and NP-Hardness
+Given an SEC network G = (V, E), a set R of requests
+for processing data streams, with each data stream processing
+request rm represented by a DAG G′
+m = (V ′
+m, E′
+m), assuming
+that the available resources of the SEC network are enough
+to admit each single data stream processing request rm, we
+consider the following optimization problems.
+On the arrival of each data stream processing request rm,
+assuming that the data rate of rm is given as a priori, the fault
+tolerant function placement problem with given data rates in
+G is aim to ﬁnd the locations of the serverless functions in
+V ′
+m for rm, determine the number of standby instances, and
+place the standby instances for each function of rm into the
+cloudlets, such that the average delay experienced among all
+data stream processing requests in R is minimized, subject to
+the memory resource capacity on each cloudlet and the fault
+tolerant requirement of rm.
+Although the data rates of data stream processing requests
+are known in their arrival time slots, the data rates in future time
+slots are dynamically changing and uncertain. Given a ﬁnite
+time slot with T, the proactive data stream processing request
+adjustment problem in G is to predict the data rates of data
+stream processing requests in different time scales, proactively
+adjustingthenumbernm ofstandbyinstancesbyre-locating,and
+assigning them to serverless functions with different memory
+resources. As such, minimizing the average delay incurred by
+all data stream processing requests in R while meeting the
+memory resource capacity of each cloudlet and the fault tolerant
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:58:40 UTC from IEEE Xplore.  Restrictions apply. 
+300
+IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 19, NO. 1, JANUARY/FEBRUARY 2026
+requirement of rm by proactively adjusting the number and
+locations of standby instances.
+We now analyze the NP-hardness of deﬁned problems.
+Theorem 1: Given an SEC network G = (V, E), a request rm
+needs to process by functions in a DAG G′
+m = (V ′
+m, E′
+m), and
+a fault tolerant requirement δm of rm, the fault tolerant function
+placement problem is NP-hard.
+Please see Appendix A, available in the supplemental ﬁle.
+IV. AN EFFICIENT ALGORITHM FOR THE FAULT TOLERANT
+FUNCTION PLACEMENT PROBLEM WITH GIVEN DATA RATES
+We now propose an efﬁcient algorithm for the fault tolerant
+function placement problem, assuming that the data rate of a
+data stream processing request rm is given a priori.
+A. An Optimization Framework to Find an Appropriate
+Number of Standby Instances
+Due to capacitated resources in cloudlets, the number nm
+of standby instances has to be chosen carefully to ﬁnd a ﬁne
+tradeoff between the fault tolerance and delay experienced by
+each data stream processing request. Speciﬁcally, if a larger
+value of nm, the standby instances may consume too much
+memory resource, making the active instances being placed into
+far locations in the SEC network and leading to long delays.
+However, a smaller value of nm may lead to the violation of
+fault tolerant requirement of the data stream processing request.
+Motivated by this, we design an optimization framework with a
+customized binary search method to ﬁnd a proper value of nm,
+such that the fault tolerant requirement is met, and the delay is
+minimized.
+We set the minimum and maximum values of nm to 1 and K,
+respectively, meaning that each function should have at least one
+and at most K standby instances. Considering that in each time
+slot τ, there are already some data stream processing requests
+in the SEC network, we could keep track of their number of
+standby instances and their experienced delays in time slot τ −
+1. We thus associate each value of nm with the average delays
+experienced by data stream processing requests which have nm
+standby instances. Let < n, d > be such an associated tuple.
+The binary search process proceeds as follows. Firstly, let
+nmin and nmax be the minimum and maximum values of the
+current search round, respectively, where nmin = 1 and nmax =
+K. The value of nm is set to ⌊nmin + nmax−nmin
+2
+⌋. We then
+check whether the fault tolerant requirement in inequality (1) is
+met. If not, we set nmin to ⌊nmin + nmax−nmin
+2
+⌋and perform
+the next round of searching; otherwise, we check the delay of n
+in its corresponding tuple by two cases:
+Case 1, if no data stream processing requests adopted this
+value so far, its delay is NIL. We then implement data stream
+processing request rm by invoking the function placement al-
+gorithm in the next subsection. The obtained delay is updated
+to the tuple, and the next round of searching is continued with
+nmin = n;
+Case 2, otherwise, we obtain the average delay directly from
+the tuple. If the delay is smaller than the delay obtained in the
+previous round, we set nmin = n and continue for the next round
+of searching; besides, we set nmax = n and continue for the next
+round. The above procedure continues until nmax ≤nmin and
+nm is set to the current value of n. After obtaining a proper value
+of nm for data stream processing request rm, we then proceed
+Algorithm 1: Fwk.
+Input: An SEC network G = (V, E), a set R of data
+stream processing requests for processing data streams,
+and their fault tolerant requirements.
+Output: The placement locations for the active and
+standby instances of functions of each rm.
+1: Create a tuple ⟨n, d⟩for each rm and 1 ≤n ≤K, where
+d ←NIL.
+2: for τ ←1 · · · T do
+3:
+Let Rτ be the set of data stream processing requests
+that arrive in time slot τ;
+4:
+for each data stream processing request rm ∈Rτ do
+5:
+nmin ←1; nmax ←K;
+6:
+nm ←−1; /*the number of standby instances for
+data stream processing request rm*/
+7:
+while nmin ≤nmax do
+8:
+n′ ←⌊nmin + nmax−nmin
+2
+⌋;
+9:
+if the fault tolerant requirement is met then
+10:
+Get d from tuple ⟨nm, d⟩;
+11:
+if d is NIL then
+12:
+Invoke Algorithm Heu in the next subsection
+to obtain a value for d;
+13:
+nmin ←nm and continue the next round of
+searching;
+14:
+if d is smaller than that in the previous round
+then
+15:
+nmin ←n′ and continue the next round of
+searching;
+16:
+else
+17:
+nmax ←n′ and continue the next round of
+searching;
+18:
+else
+19:
+nmin ←⌊nmin + nmax−nmin
+2
+⌋;
+20:
+nm ←n′;
+21:
+Invoke Algorithm Heu to place the functions of
+request rm with given the selected number nm of
+standby instances;
+to place the functions of the data stream processing request rm
+in the next subsection.
+The proposed framework is shown in Algorithm 1, referred
+to as Fwk.
+B. Function Placement With a Given Number of Standby
+Instances
+Given a value nm for each function of the data stream pro-
+cessing request rm, we now devise an efﬁcient heuristic to ﬁnd
+locationsforitsserverlessfunctionsandstandbyinstances.Since
+there is a recovering delay among active functions and standby
+instances, they need to be located in close locations. Separately
+placing a number of copies of DAG G′
+m however may increase
+the recovering delays. To avoid such high recovering delays, we
+propose a method that jointly places each function in G′
+m and
+its nm standby instances into the SEC network G. The proposed
+heuristic consists of three stages: (1) partitioning DAG G′
+m into
+a number of partitions, (2) placing the active functions of rm
+into the SEC network, and (3) placing standby instances of rm.
+Stage 1. DAG partitioning: To reduce the transmission delays,
+weﬁrstpartitionDAGG′
+m intoanumberofsequentialpartitions,
+by applying topological sorting on the DAG G′
+m of rm [44]. In
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:58:40 UTC from IEEE Xplore.  Restrictions apply. 
+XU et al.: EFFICIENT AND FAULT TOLERANT DATA STREAM PROCESSING WITH UNCERTAIN DATA RATES IN SERVERLESS EDGE COMPUTING
+301
+Fig. 3.
+An example of the constructed auxiliary graph G′′
+m.
+this case, we can avoid massive data stream transmissions among
+different cloudlets when the functions are scattered in the SEC
+network. We ﬁrst perform a depth-ﬁrst search on G′
+m to obtain
+the dependency among the functions in V ′
+m. According to the
+dependencies between functions, we can obtain a topological
+sort of the functions. We then divide the G′
+m into a set of parti-
+tions based on the results of topological sorting, each partition
+consisting of a set of functions that can be instantiated to the
+same cloudlet. Assuming that the computing resources of each
+server can handle at least one partition. Therefore, each partition
+is a minimal schedule unit. Besides, all the partitions form a
+sequence chain, which represents the execution sequences of the
+functions in the partitions and referred to as partition sequence.
+AnexampleofthefoundpartitionsequenceisshowninFig.3(b).
+Let Sm be the partition sequence of data stream processing
+request rm. Each partition pq ∈Sm has several functions, and
+the partitions have disjoint sets of functions of DAG G′
+m.
+Stage2.Activefunctionplacement:Wethenplacethepartition
+sequence Sm of each data stream processing request rm to the
+SEC network G, where the functions of the placed partition
+sequence will serve as active functions. To this end, we transfer
+the problem into the problem of ﬁnding a shortest path in an
+auxiliary graph G′′
+m.
+For each partition pq, we ﬁrst modify the SEC network G
+by eliminating the cloudlets that do not have enough memory
+resources to execute the functions in pq. Instead of removing
+the cloudlets with insufﬁcient resources directly, we treat such
+cloudlets as dummy cloudlets with zero processing delay. Let cl′
+j
+be a dummy cloudlet for cloudlet clj. The rationale behind this
+is that it will not execute the functions in pq.
+For the rest cloudlets with enough computing resources,
+we create three virtual cloudlets, denoted by cl1
+j,q, cl2
+j,q, and
+cl3
+j,q. There is an edge from cl1
+j,q to cl2
+j,q and the delay of this
+edge is set to d(⟨cl1
+j,q, cl2
+j,q⟩) = αj · Mj. There is also an edge
+from cl1
+j,q to cl3
+j,q, and its delay is d(⟨cl1
+j,q, cl3
+j,q⟩) = αj · Mj +
+maxfl∈pq do
+l,j
+ρm,τ
+. In other words, edge d(⟨cl1
+j,q, cl2
+j,q⟩) means that ex-
+ecuting functions in pq using existing serverless functions; while
+d(⟨cl1
+j,q, cl3
+j,q⟩) means that using newly-instantiated serverless
+functions to execute the functions. In addition, if there is an
+edge from clj to clj′ in G, there are two edges ⟨cl2
+j,q, cl1
+j′,q⟩and
+⟨cl3
+j,q, cl1
+j′,q⟩in the auxiliary graph. Besides, the transmission
+delays of such edges are the same as link ⟨clj, clj′⟩in the SEC
+network G. Besides, there is a bi-directional edge between the
+ﬁrst virtual cloudlets of different cloudlets in the layer, i.e.,
+⟨cl1
+j,q, cl1
+j′,q⟩and⟨cl1
+j′,q, cl1
+j,q⟩.Thedelaysofsuchedgesaresetto
+the transmission delay between clj and clj′ in the SEC network.
+We then add the nodes and edges of the modiﬁed network into
+the auxiliary graph G′′
+m. Each of such modiﬁed networks within
+G′′
+m is referred to as one of its layers. In total, we will have Sm
+layers in G′′
+m.
+We proceed by connecting different layers of the auxiliary
+graph. The overall principle is that there is a directed edge from a
+virtual cloudlets cl2
+j,q andcl3
+j,q inpartitionpq toits corresponding
+cloudlet cl1
+j,q+1 of partition pq+1. The transmission delay of
+such an edge is set to zero. We then add a common source
+node and sink node to the built auxiliary graph. There is a
+directed edge from the common source node to each virtual
+cloudlet cl1
+j,1 of the ﬁrst layer, and the delay of this edge is set to
+the minimum delay from the source function sm to cloudlet
+clj in the SEC network G. Similarly, there is an edge from
+each virtual cloudlet cl2
+j,|Sm| or cl3
+j,|Sm| of the last layer to the
+common sink node, and the delay of this edge is set to the
+minimum delay from the cloudlet to the sink function tm of data
+stream processing request rm in G. We then ﬁnd the shortest
+path from the source node to the sink node of the auxiliary
+graph G′′
+m. The cloudlets in the found shortest path execute
+the partitions in Sm. Fig. 3 shows an example of the auxiliary
+graph.
+Stage 3. Standby instance placement: Given the placed active
+functions of G′
+m, we now place nm standby instances for each
+active function. To this end, we modify the auxiliary graph
+G′′
+m and place the standby instances. Suppose the partition pq
+is placed into cloudlet clj and its consecutive partition pq+1
+is located in cloudlet clj′. Clearly, the nm standby instances
+partition of pq should be close to both clj and clj′. First, the
+virtual cloudlets whose cloudlet does not have enough com-
+puting resources to host a standby instance partition of pq will
+be converted to a dummy cloudlet. Second, we re-connect the
+common source node in G′′
+m with the virtual cloudlet cl1
+j′′,1
+of the rest cloudlets with enough computing resources for an
+instance of each function in pq except clj. The delay of the
+edge is set to the delay of transmitting the state buffer of
+rm from clj to clj′′. Also, virtual cloudlets cl2
+j′′,1 and cl3
+j′′,1
+are connected to the virtual cloudlet cl1
+j′,1 of clj′, and their
+delays are set to the delays of transmitting the state buffer from
+clj′′ to clj′. Third, cl1
+j′,1 is connected to the common virtual
+sink, and its delay is set to zero. After modifying the auxiliary
+graph G′′
+m, we then ﬁnd the shortest path from the common
+source to the common sink of G′′
+m, delete the nodes in the
+path, and repeat until we ﬁnd nm disjoint shortest paths. The
+cloudlet in each of the path hosts a standby instance for each
+function in partition pq. The detailed steps are described in
+Algorithm Heu.
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:58:40 UTC from IEEE Xplore.  Restrictions apply. 
+302
+IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 19, NO. 1, JANUARY/FEBRUARY 2026
+Algorithm 2: Heu.
+Input: An SEC network G = (V, E), a data stream
+processing request rm with a number nm of standby
+instances of its functions within its DAG G′
+m.
+Output: The placement locations for the active and
+standby instances of functions of request rm.
+1: /* Stage 1: DAG participating*/
+2: Perform a topological sort on the DAG G′
+m of rm;
+3: Let Sm be the partition sequence of rm;
+4: /* Stage 2: Active function placement*/
+5: Given partitions in Sm, construct auxiliary graph G′′
+m for
+rm;
+6: Find a shortest path in auxiliary graph G′′
+m;
+7: The q + 1 node of the shortest path is the location for
+functions in pq;
+8: /* Stage 3: Standby instances placement*/
+9: Modify the auxiliary graph by converting virtual
+cloudlets into dummy cloudlets if they do not have
+enough resources to host standby instances for functions
+in pq;
+10: Let clj be the location hosting the active instance of pq
+in stage 2;
+11: Reconnect the common source node to cl1
+j′′,1 and set its
+delay to the delay from clj to clj′′;
+12: Reconnect cl2
+j′′,1 and cl3
+j′′,1 to cl1
+j′,1 similarly;
+13: Find a disjoint shortest path from the common source
+node to the common sink of G′′
+m, and place the standby
+instance in each cloudlet of the disjoint path for each
+function in pq;
+C. Algorithm Analysis
+We now analyze the correctness and performance of the
+proposed algorithm.
+Lemma 1: Algorithm Heu delivers a feasible solution to the
+fault tolerant function placement problem with a given value of
+nm of a data stream processing request rm, which violates the
+memory resource constraint by a factor of O(|V ′
+m|).
+Please see Appendix B, available in the supplemental ﬁle.
+Theorem 2: Given an SEC network G = (V, E), and a data
+stream processing request rm needs to process its data streams
+by functions in a DAG G′
+m = (V ′
+m, E′
+m), and a fault tolerant
+requirement δm of each request rm, the algorithm Fwk delivers
+a feasible solution to the fault tolerant function placement prob-
+lem in time O(|R|log |V |(|V ′
+m||V | log(|V ′
+m||V |) + |V ′
+m|(|E| +
+|V |))).
+Please see Appendix C, available in the supplemental ﬁle.
+V. ONLINE ALGORITHMS FOR PROACTIVE DATA STREAM
+PROCESSING REQUEST ADJUSTMENT PROBLEM
+A. Overview
+The data rate of a data stream processing request is un-
+certain in future time slots. To handle such changes, we will
+require more memory resources for the active functions of rm
+when its data rate increases dramatically; otherwise, we need
+to release idle resources timely to avoid resource wastage. We
+observe that standby instances of the functions can be released
+or re-instantiated if they are not in use. This will not affect the
+timeliness of data stream processing if no fault happens. Based
+Fig. 4.
+An example of the MT-LSTM.
+on this observation, we dynamically adjust the number nm of
+standby instances by re-locating them to functions with different
+memory resources.
+B. Online Learning Algorithm
+As standby instances are already placed into the SEC network,
+they are not expected to be re-located too much. Otherwise, the
+recovering delay may be high if faults happen. We deﬁne an
+adjustment ratio as the portion of the nm standby instances to
+be re-located. Let ξm be the adjustment ratio for rm. If the data
+rate of data stream processing requests increases dramatically,
+a large value of ξm is needed, since we rely more on standby
+instances to absorb the changes of uncertain data rates. As such,
+the value of ξm is highly correlated with the data rate of data
+stream processing requests. The algorithm has two stages: (1)
+predicting the data rate of each request and the value of ξm
+of each request, (2) re-locating the standby instances of each
+request and switching between the active function and standby
+instance.
+Stage 1. Data rate and adjustment ratio predictions: We
+observe that the data rate ρm,τ of data stream processing request
+rm in time slot τ depends on the most recent events or some
+events that happened in different time scales. For example,
+the environment where the data streams of rm originate may
+experience an unexpected event, leading to a surge of the data
+stream in a short time. Considering that such events may happen
+on different time scales, the prediction method should predict
+across different time scales. The multi-timescale long short-term
+memory neural network (MT-LSTM) is proposed to learn time
+series with patterns spanning different time scales [45]. An
+MT-LSTM learns when to forget the historical information of
+the memory unit, and when to update the memory unit with new
+information. Fig 4 shows an example of the MT-LSTM.
+For each data stream processing request rm, to learn its
+data rates across different time scales based on MT-LSTM, it
+partitions the gates, memory cells, and hidden states into gm
+groups with each group being activated at a given length of time
+scale[45].Lethg bethesizeofhiddenstatesforeachgroup.Each
+data stream processing request rm may have multiple lengths of
+time scales, within each its data rates change. We then determine
+the number gm of groups needed for the MT-LSTM of data
+stream processing request rm, where each group corresponds to
+the length of a time scale. The groups can further be categorized
+from the slowest to the fastest ones. The slowest group corre-
+sponds to the longest time scale. However, the MT-LSTM is
+designed for natural language processing applications, which
+may not be apply to the prediction of the data rate of each
+data stream processing request. To make the MT-LSTM suitable
+for the scenario of data stream processing, we determine the
+number gm of time scales for each MT-LSTM of request rm.
+Speciﬁcally, we observe that a longer time scale usually leads
+to larger changes in the data rate. Therefore, we use the average
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:58:40 UTC from IEEE Xplore.  Restrictions apply. 
+XU et al.: EFFICIENT AND FAULT TOLERANT DATA STREAM PROCESSING WITH UNCERTAIN DATA RATES IN SERVERLESS EDGE COMPUTING
+303
+Algorithm 3: Adj.
+Input: An SEC network G = (V, E), a set R of data
+stream processing requests, the fault tolerant requirement
+δm of each request rm, and the number of standby
+instances of its functions.
+Output: Re-locate a part of standby instances of functions
+in the DAG of each data stream processing request in R.
+1: /*Stage 1: Data rate and adjustment ratio predictions
+for each rm ∈R*/
+2: for τ ←1 · · · T do
+3:
+for each data stream processing request rm ∈R do
+4:
+Calculate the average data rate of last ζm time slots
+to obtain ˜ρm.
+5:
+gm ←⌈log2 ˜ρm⌉−1;
+6:
+Train the MT-LSTM to obtain the predicted rate
+value ˆρm,τ+1 for the next time slot.
+7:
+ξm ←
+ˆρm,τ+1
+ρm,τ +ˆρm,τ+1 ; nm ←⌈nm · ξm⌉;
+8:
+/*Stage 2: Re-locate the standby instances and
+switching*/
+9:
+Invoke stage 3 of Algorithm Heu to re-locate the
+standby instances given the adjusted number nm of
+standby instances.
+data rate per time slot so far to estimate the number of groups
+needed. Let ˜ρm be the average data rate of rm so far. According
+to [45], the maximum number of groups for the prediction of
+data rate of rm then is
+gmax
+i
+= ⌈log2 ˜ρm⌉−1.
+(6)
+This means that the fastest group in the MT-LSTM of data stream
+processing request rm has the most frequent changes in data
+rates, and the slowest group has a stable data rate.
+We then train the MT-LSTM to predict the data rate of each
+request in the next time slot. Speciﬁcally, each input of the MT-
+LSTM of request rm includes the data rates of its last ζm time
+slots. Let ˆρm,τ+1 be the predicted data rate of rm in the next
+time slot τ + 1. We then determine the adjustment ratio ξm of
+request rm by
+ξm = ˆρm,τ+1/(ρm,τ + ˆρm,τ+1).
+(7)
+The rationale behind is that the more changes of the data rate
+more standby instances need to be re-located or re-assigned.
+Stage 2. Relocating standby instance and switching: Having
+obtained the values of ˆρm,τ+1 and ξm, we re-locate the standby
+instances and switch from active instances to standby instances
+of the functions of rm by invoking the third stage of Algo-
+rithm Heu with the data rate of ˆρm,τ+1, by selecting a number
+of ⌈nm · ξm⌉standby instances of each function for re-location.
+The detailed algorithm is given in Algorithm 3, which is referred
+to as Adj.
+C. Algorithm Analysis
+We now analyze the performance and correctness of the
+proposed algorithm in the following theorem.
+Theorem 3: Given an SEC network G = (V, E), a set R of
+data stream processing requests, each request rm ∈R needs to
+process its data stream by functions in a DAG G′
+m = (V ′
+m, E′
+m),
+andafaulttolerantrequirementδm ofeachrequestrm, algorithm
+Adj delivers a feasible solution to the proactive adjustment
+problem.
+Please see Appendix D, available in the supplemental ﬁle.
+Theorem 4: The time complexity of the proposed al-
+gorithm Adj is O(T|R|(
+gmax
+i
+|ρm,τ |
+gm h2
+g+log |V |(|V ′
+m| |V |
+log(|V ′
+m||V |)+|V ′
+m|(|E| + |V |)))).
+Please see Appendix E, available in the supplemental ﬁle.
+Theorem 5: The performance bound of the delay for our
+proposed algorithm Adj in current time slot τ is dadj
+τ
+≤
+αmax
+j
+M max
+j,τ
+αmin
+j
+M min
+j,τ dopt
+τ
++ 
+p∈padj
+τ
+dmax
+e,τ
+(
+ps∈p
+
+e∈ps ρm,τ +
+
+fl∈p
+
+e∈pl,τ κ), where M max
+j,τ
+and M min
+j,τ
+are maximum
+and minimum of amount memory allocated by cloudlet CLj to
+process a unit of data rate at t, and dmax
+e,τ
+represents the maximum
+of transmission delay of all paths at t. Also, the fault tolerance
+gap between our proposed algorithm Adj and the optimal
+solution at time slot τ is Pradj ≤1 −(1 −Propt)(pl)ˆϵ·nm,
+where Pradj and Propt are the probability of fault tolerance at
+τ obtained by Adj and optimal solution, respectively.
+Please see Appendix F, available in the supplemental ﬁle.
+VI. EXPERIMENTS
+In this section, we evaluate the performance of the proposed
+algorithms against their counterparts based on real datasets.
+A. Experimental Settings and Test-Bed Implements
+Parameter settings: We consider an SEC network consisting
+of 50 to 200 cloudlets. The memory capacity of each cloudlet
+varies from 128 GB to 512 GB [46]. The data rate of each data
+stream processing request varies from [0.01, 100] MB/s [47].
+Based on analyzing the performance metrics of 1,250 virtual
+machines in Bitbrains’ distributed data center [48], we set the
+amount of memory required for each cloudlet to process a unit
+data rate to 85 MB, and the impact of each cloudlet memory
+allocation on processing delay is set within [0.05, 0.09] [41].
+Referring to the real serverless computing platform [49], we
+adjust the memory allocated to the function to [128, 10240]
+MB, with an increment of 128 MB. The transmission delay
+for transmitting a unit volume of data along link e is set to
+[0.1, 0.5] ms [50]. The probabilities of failure for each function
+instance are in the range of [0.001, 0.003] [51]. The fault tolerant
+requirement is set at 99.1% to 99.9% [38]. The maximum
+number of standby instances is set to 3. The results in each ﬁgure
+are based on the average of 10 runs of the proposed algorithms
+and their benchmarks.
+Test-bed: We built a test-bed of the SEC network with both
+real hardware devices and a real serverless platform, as shown
+in Fig. 5. The hardware includes a server equipped with an
+i9-13900HX CPU, 64 G RAM, a PC equipped with an i7-13700
+CPU and 32 G RAM, and an Nvidia Jetson nano. The server is
+used to implement the experimental platform, the PC is used to
+verify the algorithm Fwk, Adj and their benchmarks, and the
+Jetson is used to simulate edge devices and run the MT-LSTM
+algorithm. We divide the server into four virtual machines with
+equal computing resources, where consisting of a master node
+and three worker nodes. All virtual machines use the Ubuntu
+24.04 operating system and deploy Kubernetes v1.311 with
+1https://github.com/kubernetes/kubernetes
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:58:40 UTC from IEEE Xplore.  Restrictions apply. 
+304
+IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 19, NO. 1, JANUARY/FEBRUARY 2026
+Fig. 5.
+A test-bed of a serverless platform in an SEC network.
+containerd v1.7,2 consisting of one master node and three worker
+nodes. The set of pods is activated as cloudlets in the Kubernetes
+cluster. We use Flannel to build an overlay network of the
+test-bed, and use K8s-netsim to simulate pod-pod connectivity.
+We further deployed OpenFaaS [52] as a serverless platform
+for the test-bed on the master node. We use the functions
+that measure the impact of load size on processing time when
+triggering serverless functions in [53] as functions in each data
+stream processing request. We ﬁnally implemented MT-LSTM
+on Jetson Nano with sci-kit learn [54]. All the experiments are
+developed by Python 3.9 with multiple libraries, such as request,
+kuberneter, and dragonk8s, etc.
+Dataset:Wenowintroducethedatasetusedinourexperiment.
+Data stream processing requests are obtained from the DAG of
+batch workloads of Alibaba’s cluster-trace-v2018 [55], which is
+widely adopted in the study of serverless function scheduling.
+We construct DAGs for the data stream processing requests
+using the dependencies of each task node in the dataset as
+dependencies among functions. Besides, according to (2), data
+rate and memory usage show a positive correlation. Therefore,
+we use the percentage of memory usage in this dataset as the
+percentage of the data rate. We then obtain the actual data rate
+value within its range [0.01, 100] MB/s according to the ratio.
+We also use Huawei Public Cloud Trace 2025 as the value of cold
+start delay [42]. The cold start delay do
+l,j is randomly selected
+by the value of Region 1 cold starts in this dataset.
+Benchmarks: We compare the proposed algorithms with the
+following four benchmarks:
+r FixDoc: A function placement and DAG scheduling algo-
+rithm for serverless applications [14]. It takes into account
+the dependence of the serverless functions and leverages a
+dynamic programming-based approach to efﬁciently place
+functions, ultimately reducing the processing and trans-
+mission delays of the data stream processing requests.
+r Lambda+: A AWS Lambda’s scheduling strategy to im-
+prove resource utilization [49], which designs a greedy-
+based method to place the functions of the same DAG onto
+thesamecloudletuntilitscapacityisreached.Weexpanded
+this work by adding an active-standby mechanism.
+r HEFT:
+A
+heterogeneous-earliest-ﬁnish-time
+algo-
+rithm [56]. HEFT ﬁrst ranks the sequential partitions
+for a DAG based on the processing and transmission
+delays of each function and then places the functions
+2https://github.com/containerd/containerd
+Fig. 6.
+The impact of the different number of cloudlets on the performance of
+algorithms Fwk, Lambda+, FixDoc, HEFT, and DRL.
+Fig. 7.
+The impact of different number of requests on the performance of
+algorithms Fwk, Lambda+, FixDoc, HEFT, and DRL.
+into the cloudlet according to their ranks to minimize the
+processing and transmission delays.
+r DRL: A deep reinforcement learning-based function place-
+ment method [13], where the negative of the delay for each
+request is set as a reward, and functions are placed into
+cloudlets to minimize the delay.
+B. Performance Evaluation
+Impact of the number of cloudlets: We ﬁrst evaluate the
+performance of algorithms in terms of the average delay, average
+fault tolerance, and average running time in Fig. 6, by varying
+the number of cloudlets from 50 to 200 while ﬁxing the number
+of requests at 200. From Fig. 6(a), we can see that the average
+delay of Fwk is 21.9%, 3.5%, 15.7%, and 12.9% lower than
+those of Lambda+, FixDoc, HEFT, and DRL respectively,
+when the network size is 200. The rationale behind this is that
+Fwk ﬁnds the locations for functions by constructing auxiliary
+graphs, minimizing transmission delays between functions as
+much as possible. Further, we can see that the average delay
+obtained by the algorithms is decreasing with the growth of
+the number of cloudlets. The reason is that as the number of
+cloudlets grows, the functions can be placed in locations with
+lower processing delays with high probability. In Fig. 6(b), we
+canseethatFwkandLambda+havemuchhigherfaulttolerance
+than their counterparts. Furthermore, Fwk can achieve better
+fault tolerance compared with Lambda+, FixDoc, HEFT, and
+DRL, due to the binary search mechanism, Fwk carefully ﬁnds
+the trade-off between the fault tolerance and the average delay.
+In Fig. 6(c), we can see that the average running times of Fwk,
+FixDoc, and HEFT increase with the growth of the number
+of cloudlets, and Fwk achieves the highest average running
+time. The reason is that the time to ﬁnd the shortest path of
+the auxiliary graph becomes longer as the nodes of the auxiliary
+graph increases exponentially with the growth of the number of
+cloudlets.
+Impact of the number of requests: We then investigated the
+impact of the number of requests on the performance of al-
+gorithms in Fig. 7, by varying the number of requests from
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:58:40 UTC from IEEE Xplore.  Restrictions apply. 
+XU et al.: EFFICIENT AND FAULT TOLERANT DATA STREAM PROCESSING WITH UNCERTAIN DATA RATES IN SERVERLESS EDGE COMPUTING
+305
+Fig. 8.
+The impact of different maximum transmission delay on the perfor-
+mance of algorithms Fwk, Lambda+, FixDoc, HEFT, and DRL.
+50 to 200 while ﬁxing the number of cloudlets at 100. From
+Fig. 7(a), we can see that the average delay of all algorithms
+keeps increasing as the number of requests grows. The reason
+is that more functions need to be placed when the number of
+requests increases, which results in higher average delays due to
+the lack of resources. Speciﬁcally, the average delay of Fwk is
+19.6%, 3.1%, 14.1%, and 11.3% lower than those of Lambda+,
+FixDoc, HEFT, and DRL, respectively, when the number of
+requests is 200. From Fig. 7(b), we can see that the average
+fault tolerance of Fwk and Lambda+ has remained stable, and
+other algorithms continue to decrease as the number of requests
+grows. In particular, the average fault tolerance of Fwk is 27.1%
+higher than its counterparts when the number of requests is
+200. The reason is that Fwk carefully selects the right number
+and locations for standby instances of a data stream processing
+request to ensure its fault tolerant requirements. The average
+running times of algorithms are shown in Fig. 7(c), from which
+the runtime of Fwk increases slightly as the number of requests
+increases compared with its counterparts.
+Impact of different maximum transmission delay: We further
+evaluate the performance of algorithms in Fig. 8 by varying
+the maximum transmission delay for transmitting a unit volume
+of data along each link from 0.2 to 0.5 ms, while ﬁxing the
+number of cloudlets at 100 and the number of requests at 200.
+We ﬁrst can see that the average delay increases with the growth
+of the maximum transmission delay of a unit of data in Fig. 8(a),
+due to the increased transmission delay. Speciﬁcally, Fwk de-
+livers the lowest average transmission delay, where outperforms
+Lambda+, FixDoc, HEFT, and DRL 19.2%, 1.2%, 14.2% and
+11.1%, respectively, when the maximum transmission delay is
+0.5. The reason is that Fwk considers placing DAG partitioning
+as close as possible to adjacent cloudlets, which reduces the
+effect of the maximum transmission delay on the average delay.
+Further, we can see from the Fig. 8(b) and (c) that all the algo-
+rithms show a steady trend in terms of average fault tolerance and
+average running time, since the maximum transmission delay
+between two cloudlets has little effect on the fault tolerance of
+the requests and the average running time of the algorithms.
+Impact of different maximum memory capacity: We then in-
+vestigated the impact of the maximum memory capacity of each
+cloudlet on the performance of algorithms in Fig. 9 by varying
+the maximum memory capacity of each cloudlet from 256 to
+512 GB, while ﬁxing the network size at 100 and the number
+of requests at 200. From Fig. 9(a), we can see that the average
+delay obtained by all algorithms decrease with the growth of
+the maximum memory capacity of cloudlets, where the average
+delay of Fwk is 16.2%, 0.9%, 5.6%, and 7.9% lower than those
+of Lambda+, FixDoc, HEFT, and DRL, respectively, when the
+max memory capacity is 512. The reason is that with the growth
+of the memory capacity of each cloudlet, the functions in each
+request can be placed into cloudlets with lower processing and
+Fig.9.
+Theimpactofdifferentmaximummemorycapacityontheperformance
+of algorithms Fwk, Lambda+, FixDoc, HEFT, and DRL.
+Fig. 10.
+The impact of different number of functions on the performance of
+algorithms Fwk, Lambda+, FixDoc, HEFT, and DRL.
+Fig. 11.
+The impact of different data rates on the performance of algorithms
+Fwk, Lambda+, FixDoc, HEFT, and DRL.
+transmissiondelays.InFig.9(b),wecanseethattheaveragefault
+tolerance of cloudlets remains stable, because the maximum
+memory capacity does not impact the fault tolerance of each
+cloudlet directly. In Fig. 9(c), we can see that the memory
+capacity has essentially no effect on the running time of the
+algorithms. The reason is that the average running time is related
+to the number of requests, cloudlets, and functions, instead of
+memory capacity, as shown in Theorem 2.
+Impact of the number of functions: We now investigated
+the impact of the number of functions of each request on the
+performance of algorithms in Fig. 10, by varying the number of
+functions of each request from 10 to 50 while ﬁxing the number
+of cloudlets at 100 and the number of requests at 200. From
+Fig. 10(a) and (c), we can see that the average delays and average
+running times increase when the number of functions grows
+from 10 to 50. Speciﬁcally, Fwk achieves the lowest average
+delay when the number of functions is 50. The rationale behind
+this is that as the number of functions of each request increases,
+the memory resource in a cloudlet becomes more strained, po-
+tentially leading to more dispersed function placement for each
+request. We can also see from Fig. 10(b) that the fault tolerance
+of FixDoc, HEFT, and DRL has decreased signiﬁcantly, while
+that of Fwk remains stable. The reason is that the active-standby
+failover mechanism ensures the fault tolerant requirement for
+each request.
+Impact of different data rates: We also evaluate the impact of
+different data rates of requests on the performance of algorithms
+in Fig. 11, by varying the maximum data rate of a request from
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:58:40 UTC from IEEE Xplore.  Restrictions apply. 
+306
+IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 19, NO. 1, JANUARY/FEBRUARY 2026
+Fig. 12.
+The impact of different fault probabilities on the performance of
+algorithms Fwk, Lambda+, FixDoc, HEFT, and DRL.
+Fig. 13.
+The performance of MT-LSTM with different sizes of hidden states
+deployed on Jetson Nano and scikit-learn.
+10 Mb/s to 100 Mb/s while ﬁxing the network size at 100 and
+the number of requests at 200. From Fig. 11(a), we can see
+that the average delays of algorithms Fwk and its counterparts
+increase with the growth of the maximum data rate, because
+transmitting more data leads to higher delay. Speciﬁcally, we
+can observed that our proposed algorithm Fwk outperforms
+Lambda+, FixDoc, HEFT, and DRL 17.4%, 2.3%, 16.1%, and
+7.9%, receptively, when maximum data rate is 100 MB/s. The
+average fault tolerance of requests and average running time by
+the algorithms are shown in Fig. 11(b) and (c). We can see that
+Fwk achieves the highest average fault tolerance when the max
+data rate is 100. Besides, we can see that the running time of
+Fwk is stable. The reasons are similar to the analysis in Fig. 9.
+Impact of different fault probabilities: We then study the
+impact of the different fault probabilities of each request on
+the performance of algorithms in Fig. 12, by varying the fault
+probabilities of each function from 0.1% to 0.3% while ﬁxing the
+number of cloudlets at 100 and the number of requests at 200.
+It can be observed from Fig. 12(a) that the average delays of
+all algorithms keep increasing as the fault probability grows.
+This is because more faults lead to higher recovery delays.
+Meanwhile, we can also see that the growth trends of Fwk
+and Lambda+ are signiﬁcantly slower than those of HEFT,
+FixDoc, and DRL. This is because Fwk and Lambda+ adopt an
+active-standby failover mechanism, resulting in lower recovery
+delay. In Fig. 12(b) and (c), we can see that the average fault
+tolerance and running time of algorithms remain stable. The
+rationale behind this is similar to the reason in Fig. 11, we do
+not repeat it here for the sake of space.
+The performance of MT-LSTM: We now evaluate the perfor-
+manceofMT-LSTMwithdifferentsizesofhiddenstatesinterms
+of the MSE loss, accuracy, average inference time, and average
+memory usage in Fig. 13, by varying the size of hidden states
+from 8 to 128. Notice that the experiments on the performance
+Fig. 14.
+The impact of the uncertain data rate on the performance of algorithms
+Adj, Lambda+, FixDoc, HEFT, and DRL.
+of MT-LSTM were implemented using scikit-learn and run on
+Jetson nano. From Fig. 13(a), we can see that as the number of
+training epochs increases, the MSE loss decreases signiﬁcantly.
+Meanwhile, the larger the size of hidden states, the greater the
+decrease in MSE loss. Besides, due to the difference in MSE
+loss, we can see from Fig. 13(b) that the loss is converging,
+and the higher the accuracy of the models. The reason is that
+the size of the hidden states means that the more extensive the
+hidden state information of the model, resulting in the better
+the performance. Fig. 13(c) and (d) show the inference time and
+memory usage of the models with different hidden sizes. We can
+see that as the size of hidden states increases, inference time and
+memory usage increase signiﬁcantly. The reason is that the time
+complexity of MT-LSTM is related to the size of hidden states,
+and the theoretical analysis is shown in Theorem 4.
+Impact of the uncertain data rate: We ﬁnally investigate the
+performance of the algorithm within a ﬁnite time horizon with
+250 time slots in Fig. 14 with the network size ﬁxed at 50, the
+number of requests sets at 100, and the data rate sets according
+to the data rate in MT-LSTM with different sizes of hidden state
+and actual data rate in the dataset [55]. Fig. 14(a) and (b) show
+that the average delay and memory usage for process data rates
+of algorithm Adj. We can see that the average delay and memory
+usagedeviatesigniﬁcantlyfromtheactualdataratewhenthesize
+of hidden states is 8. Therefore, we typically select MT-LSTM
+models with a hidden state size of 32 or 128 in practice. Besides,
+we evaluated the performance of algorithms Adj, Lambda+,
+FixDoc, HEFT, and DRL when the size of hidden states is set
+as 32. It can be seen from Fig. 14(c) that the trend of average
+delay is similar to the trend of data rate, and algorithm Adj
+achieves the best results. The reason is that Adj can predict the
+data rate accurately and re-place the standby instances in a more
+appropriate location.
+VII. CONCLUSION
+In this paper, we studied the problems of efﬁcient and fault
+tolerant data stream processing with uncertain data rates in an
+SEC network. We ﬁrst proposed an optimization framework
+for the problem via a customized binary search process and
+an auxiliary graph construction method. If the data rates of
+data stream processing requests are dynamically changing and
+uncertain, we studied the proactive adjustment problem. We then
+designed a novel online learning algorithm to predict the data
+rates based on MT-LSTM and dynamically adjust the number
+and locations of standby instances to absorb uncertain data
+rates. We also conducted experiments based on a real test-bed
+with real world datasets. Experimental results showed that the
+performance of each data stream processing request outperforms
+its counterparts by 13.5% on the average delay and 26.3% on
+the average fault tolerance.
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:58:40 UTC from IEEE Xplore.  Restrictions apply. 
+XU et al.: EFFICIENT AND FAULT TOLERANT DATA STREAM PROCESSING WITH UNCERTAIN DATA RATES IN SERVERLESS EDGE COMPUTING
+307
+REFERENCES
+[1] B. B. Sinha and R. Dhanalakshmi, “Recent advancements and challenges
+of Internet of Things in smart agriculture: A survey,” Future Gener.
+Comput. Syst., vol. 126, pp. 169–184, 2022.
+[2] Y. Yang, K. Peng, S. Wang, X. Xu, P. Xiao, and V. C. Leung, “Fairness-
+aware incentive mechanism for multi-server federated learning in edge-
+enabled wireless networks with differential privacy,” IEEE Trans. Mobile
+Comput., vol. 24, no. 10, pp. 9919–9933, Oct. 2025.
+[3] K. Peng, B. Zhao, M. Bilal, and X. Xu, “Reliability-aware computation
+ofﬂoading for delay-sensitive applications in MEC-enabled aerial com-
+puting,” IEEE Trans. Green Commun. Netw., vol. 6, no. 3, pp. 1511–1519,
+Sep. 2022.
+[4] Z. Gao, C. Cecati, and S. X. Ding, “A survey of fault diagnosis and fault-
+tolerant techniques—Part I: Fault diagnosis with model-based and signal-
+based approaches,” IEEE Trans. Ind. Electron., vol. 62, no. 6, pp. 3757–
+3767, Jun. 2015.
+[5] Y. Li, Y. Lin, Y. Wang, K. Ye, and C. Xu, “Serverless computing: State-of-
+the-art, challenges and opportunities,” IEEE Trans. Serv. Comput., vol. 16,
+no. 2, pp. 1522–1539, Mar./Apr. 2023.
+[6] F. Tütüncüo˘glu, S. Jošilo, and G. Dán, “Online learning for rate-adaptive
+task ofﬂoading under latency constraints in serverless edge computing,”
+IEEE/ACM Trans. Netw., vol. 31, no. 2, pp. 695–709, Apr. 2023.
+[7] H. Zhang, A. Cardoza, P. B. Chen, S. Angel, and V. Liu, “Fault-tolerant
+and transactional stateful serverless workﬂows,” in Proc. OSDI ’20, 2020,
+pp. 1187–1204.
+[8] P. Liu, D. D. Silva, and L. Hu, “DART: A scalable and adaptive edge stream
+processing engine,” in Proc. USENIX ATC ’21, 2021, pp. 239–252.
+[9] H. Dui, S. Zhang, M. Liu, X. Dong, and G. Bai, “IoT-enabled real-time
+trafﬁc monitoring and control management for intelligent transportation
+systems,” IEEE Internet Things J., vol. 11, no. 9, pp. 15842–15854,
+May 2024.
+[10] J. Wen, Z. Chen, X. Jin, and X. Liu, “Rise of the planet of serverless
+computing: A systematic review,” ACM Trans. Softw. Eng. Methodol.,
+vol. 32, no. 5, pp. 1–61, 2023.
+[11] P. Vahidinia, B. Farahani, and F. S. Aliee, “Mitigating cold start problem in
+serverless computing: A reinforcement learning approach,” IEEE Internet
+Things J., vol. 10, no. 5, pp. 3917–3927, Mar. 2023.
+[12] J. Xu, B. Palanisamy, Q. Wang, H. Ludwig, and S. Gopisetty, “Amnis:
+Optimized stream processing for edge computing,” J. Parallel Distrib.
+Comput., vol. 160, pp. 49–64, 2022.
+[13] Y. Yang et al., “Multi-objective deep reinforcement learning for function
+ofﬂoading in serverless edge computing,” IEEE Trans. Serv. Comput.,
+vol. 18, no. 1, pp. 288–301, Jan./Feb. 2025.
+[14] L. Liu et al., “Dependent task placement and scheduling with function con-
+ﬁguration in edge computing,” in Proc. ACM IWQoS ’19, 2019, pp. 1–10.
+[15] S. Deng et al., “Dependent function embedding for distributed serverless
+edge computing,” IEEE Trans. Parallel Distrib. Syst., vol. 33, no. 10,
+pp. 2346–2357, Oct. 2022.
+[16] Z. Cai, Z. Chen, X. Chen, R. Ma, H. Guan, and R. Buyya, “SPSC: Stream
+processing framework atop serverless computing for industrial Big Data,”
+IEEE Trans. Cybern., vol. 54, no. 11, pp. 6509–6517, Nov. 2024.
+[17] W. W. Song, T. Um, S. Elnikety, M. Jeon, and B.-G. Chun, “Sponge:
+Fast reactive scaling for stream processing with serverless frameworks,”
+in Proc. USENIX ATC ’23, 2023, pp. 301–314.
+[18] S. R. Poojara, C. K. Dehury, P. Jakovits, and S.N. Srirama, “Serverless
+data pipeline approaches for iot data in fog and cloud computing,” Future
+Gener. Comput. Syst., vol. 130, pp. 91–105, 2022.
+[19] G. Amarasinghe, M. D. D. Assunção, A. Harwood, and S. Karunasekera,
+“A data stream processing optimisation framework for edge computing
+applications,” in Proc. IEEE 21st Int. Symp. Real-Time Distrib. Comput.,
+2018, pp. 91–98.
+[20] B. Ramprasad et al., “Shepherd: Seamless stream processing on the edge,”
+in Proc. IEEE/ACM SEC ’ 22, 2022, pp. 40–53.
+[21] X. Fu, T. Ghaffar, J. C. Davis, and D. Lee, “EdgeWise: A better stream pro-
+cessingenginefortheedge,”inProc.USENIXATC’19,2019,pp.929–946.
+[22] R. B. Roy, T. Patel, and D. Tiwari, “Icebreaker: Warming serverless
+functions better with heterogeneity,” in Proc. ACM ASPLOS ’22, 2022,
+pp. 753–767.
+[23] B. Wang, A. Ali-Eldin, and P. Shenoy, “Lass: Running latency sensitive
+serverless computations at the edge,” in Proc. ACM HPDC ’21, 2021,
+pp. 239–251.
+[24] S. Khare et al., “Linearize, predict and place: Minimizing the makespan
+for edge-based stream processing of directed acyclic graphs,” in Proc.
+IEEE/ACM SEC ’ 19, 2019, pp. 1–14.
+[25] A. Sari and M. Akkaya, “Fault tolerance mechanisms in distributed
+systems,” Int. J. Communications, Netw. System Sci., vol. 8, no. 12,
+pp. 471–482, 2015.
+[26] V. Sreekanti, C. Wu, S. Chhatrapati, J. E. Gonzalez, J. M. Hellerstein, and
+J. M. Faleiro, “A fault-tolerance shim for serverless computing,” in Proc.
+ACM EuroSys ’20, 2020.
+[27] S. Qi, X. Liu, and X. Jin, “Halfmoon: Log-optimal fault-tolerant stateful
+serverless computing,” in Proc. 29th Symp. Operating Syst. Princ., 2023,
+pp. 314–330.
+[28] A. Barrak, M. Jaziri, R. Trabelsi, F. Jaafar, and F. Petrillo, “Spirt: A
+fault-tolerant and reliable peer-to-peer serverless ml training architecture,”
+in Proc. IEEE 23rd Int. Conf. Softw. Quality, Reliability, Secur., 2023,
+pp. 650–661.
+[29] T. Yu et al., “Characterizing serverless platforms with serverlessbench,”
+in Proc. 11th ACM Symp. Cloud Comput., 2020, pp. 30–44.
+[30] L. Wang, M. Li, Y. Zhang, T. Ristenpart, and M. Swift, “Peeking behind
+the curtains of serverless platforms,” in Proc. USENIX ATC ’18, 2018,
+pp. 133–146.
+[31] J. Yuan, M. A. Abdel-Aty, L. Yue, and Q. Cai, “Modeling real-time
+cycle-level crash risk at signalized intersections based on high-resolution
+event-based data,” IEEE Trans. Intell. Transp. Syst., vol. 22, no. 11,
+pp. 6700–6715, Nov. 2021.
+[32] R. Viola, A. Martı´n, M. Zorrilla, J. Montalbán, P. Angueira, and G.-M.
+Muntean, “A survey on virtual network functions for media streaming:
+Solutions and future challenges,” ACM Comput. Surv., vol. 55, no. 11,
+pp. 1–37, 2023.
+[33] M. Xu et al., “A full dive into realizing the edge-enabled metaverse:
+Visions, enabling technologies, and challenges,” IEEE Commun. Surveys
+Tuts., vol. 25, no. 1, pp. 656–700, Firstquarter 2023.
+[34] “Apache kafka,” 2024. [Online]. Available: https://github.com/apache/
+kafka
+[35] “Apacheﬂink,”2024.[Online].Available:https://github.com/apache/ﬂink
+[36] B. Zhao, K. Peng, K. Zhang, H. Sun, Z. Tu, and D. Chu, “Serﬂow: A multi-
+stage service-enhanced mechanism for workﬂow applications in cpss with
+end-edge-cloud collaboration,” IEEE Internet Things J., vol. 12, no. 16,
+pp. 33792–33813, Aug. 2025.
+[37] Z. Xu et al., “Learning-driven algorithms for responsive AR ofﬂoading
+with non-deterministic rewards in metaverse-enabled MEC,” IEEE/ACM
+Trans. Netw., vol. 32, no. 2, pp. 1556–1572, Apr. 2024.
+[38] “Aws lambda sla,” 2022. [Online]. Available: https://aws.amazon.com/cn/
+lambda/sla/
+[39] Y. Bouizem, N. Parlavantzas, D. Dib, and C. Morin, “Active-standby for
+high-availability in faas,” in Proc. 6th Int. Workshop Serverless Comput.,
+2020, pp. 31–36.
+[40] R. Cordingly, W. Shu, and W. J. Lloyd, “Predicting performance and
+cost of serverless computing functions with saaf,” in Proc. 2020 IEEE
+DASC/PiCom/CBDCom/CyberSciTech. IEEE, 2020, pp. 640–649.
+[41] M. Shahrad et al., “Serverless in the wild: Characterizing and optimizing
+the serverless workload at a large cloud provider,” in Proc. USENIX ATC
+’20, 2020, pp. 205–218.
+[42] A. Joosen et al., “Serverless cold starts and where to ﬁnd them,” in Proc.
+EuroSys, 2025, pp. 938–953.
+[43] M. Copik, G. Kwasniewski, M. Besta, M. Podstawski, and T. Hoeﬂer,
+“Sebs: A serverless benchmark suite for function-as-a-service computing,”
+in Proc. 22nd Int. Middleware Conf., 2021, pp. 64–78.
+[44] T. H. Cormen, C. E. Leiserson, R. L. Rivest, and C. Stein, Introduction to
+Algorithms. Cambridge, MA, USA: MIT Press, 2022.
+[45] P. Liu, X. Qiu, X. Chen, S. Wu, and X.-J. Huang, “Multi-timescale long
+short-term memory neural network for modelling sentences and docu-
+ments,” in Proc. 2015 Conf. Empirical Methods Natural Lang. Process.,
+2015, pp. 2326–2335.
+[46] A. Das, S. Imai, S. Patterson, and M. P. Wittie, “Performance optimization
+for edge-cloud serverless platforms via dynamic task placement,” in Proc.
+IEEE/ACM Int. Symp. Cluster, Cloud Internet Comput., 2020, pp. 41–50.
+[47] A.Shukla,S.Chaturvedi,andY.Simmhan,“Riotbench:AnIoTbenchmark
+for distributed stream processing systems,” Concurrency Computation:
+Pract. Experience, vol. 29, no. 21, pp. 1–22, 2017.
+[48] “Gwa–t–12 bitbrainsm,” 2023. [Online]. Available: http://gwa.ewi.tudelft.
+nl/datasets/gwa-t-12-bitbrains/
+[49] M. Brooker, M. Danilov, C. Greenwood, and P. Piwonka, “On-demand
+container loading in AWS lambda,” in Proc. USENIX ATC ’23, 2023,
+pp. 315–328.
+[50] S. Knight, H. X. Nguyen, N. Falkner, R. Bowden, and M. Roughan,
+“The internet topology zoo,” IEEE J. Sel. Areas Commun., vol. 29, no. 9,
+pp. 1765–1775, Oct. 2011.
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:58:40 UTC from IEEE Xplore.  Restrictions apply. 
+308
+IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 19, NO. 1, JANUARY/FEBRUARY 2026
+[51] “Service status,” 2023. [Online]. Available: https://cloudharmony.com/
+status-of-dns-and-compute-and-storage
+[52] D.-N. Le, S. Pal, and P. K. Pattnaik, “Openfaas,” in Cloud Computing Solu-
+tions: Architecture, Data Storage, Implementation and Security. Hoboken,
+NJ, USA: Wiley, 2022 .
+[53] F. Carpio, M. Michalke, and A. Jukan, “Benchfaas: Benchmarking server-
+less functions in an edge computing network testbed,” IEEE Netw., vol. 37,
+no. 5, pp. 81–88, Sep. 2023.
+[54] F. Pedregosa et al., “Scikit-learn: Machine learning in python,” J. Mach.
+Learn. Res., vol. 12, pp. 2825–2830, 2011.
+[55] Q. Weng et al., “Beware of fragmentation: Scheduling GPU-Sharing
+workloads with fragmentation gradient descent,” in Proc. USENIX ATC
+’23, 2023, pp. 995–1008.
+[56] H. Topcuoglu, S. Hariri, and M.-Y. Wu, “Performance-effective and low-
+complexity task scheduling for heterogeneous computing,” IEEE Trans.
+Parallel Distrib. Syst., vol. 13, no. 3, pp. 260–274, Mar. 2002.
+Zichuan Xu (Member, IEEE) received the BSc and
+ME degrees in computer science from the Dalian
+University of Technology in China in 2008 and 2011,
+respectively, and the PhD degree in computer science
+from the Australian National University in 2016.
+From 2016 to 2017, he was a research associate
+with the Department of Electronic and Electrical
+Engineering, University College London, U.K.. He
+is currently a professor in School of Software with
+the Dalian University of Technology. His research
+interests include mobile edge computing, serverless
+computing, network function virtualization, Internet of Things, and algorithm
+design. He serves as an Associate Editor of the IEEE Transactions on Parallel
+and Distributed Systems.
+Peichen Liu (Graduate Student Member, IEEE) is
+currently working toward the PhD degree with the
+School of Software, Dalian University of Technology,
+Dalian, China. His research interests include mobile
+edge computing, reinforcement learning, approxima-
+tion algorithm design, and AI infrastructure/system.
+Qiufen Xia (Member, IEEE) received the BSc and
+ME degrees in computer science from the Dalian
+University of Technology in China, in 2009 and 2012,
+respectively, and the PhD degree in computer science
+from the Australian National University in 2017. She
+is currently an associate professor with the Dalian
+University of Technology. Her research interests in-
+clude mobile cloud computing, query evaluation, Big
+Data analytics, Big Data management in distributed
+clouds, and cloud computing.
+Weifa Liang (Fellow Member, IEEE) received the
+BSc degree computer science from Wuhan Univer-
+sity, China in 1984, the ME degree computer science
+from the University of Science and Technology of
+China in 1989, and the PhD degree computer science
+from the Australian National University in 1998. He
+was a professor in the Australian National University.
+He is currently a professor in the Department of Com-
+puter Science with the City University of Hong Kong.
+His research interests include design and analysis
+of energy efﬁcient routing protocols for Internet of
+Things, mobile edge computing (MEC), network function virtualization (NFV),
+software-deﬁned networking (SDN), approximation algorithms, combinatorial
+optimization, and graph theory. He is currently an associate editor in the Editorial
+Board of IEEE Transactions on Communications.
+Guangyuan Xu is currently working toward the PhD
+degreewiththeSchoolofSoftware,DalianUniversity
+of Technology, Dalian, China. His current research
+interests include mobile edge computing, reliability
+computing, satellite edge computing, and resource
+allocation.
+Wenzheng Xu (Member, IEEE) received the BSc,
+ME and PhD degrees in computer science from
+Sun Yat-Sen University, Guangzhou, China, in 2008,
+2010, and 2015, respectively. He currently is an as-
+sociate professor with the Sichuan University and
+was a visitor with the Australian National University.
+His research interests include wireless ad hoc and
+sensor networks, mobile computing, approximation
+algorithms, combinatorial optimization, online social
+networks, and graph theory.
+Pan Zhou (Senior Member, IEEE) received the BS
+degree in the Advanced Class of the Huazhong Uni-
+versity of Science and Technology, the MS degree
+in the Department of Electronics and Information
+Engineering from HUST, Wuhan, China, in 2006
+and 2008, respectively, and the PhD degree in the
+School of Electrical and Computer Engineering with
+the Georgia Institute of Technology (Georgia Tech),
+in 2011, Atlanta, USA. He is currently a full pro-
+fessor and the PhD advisor with Hubei Engineering
+Research Center on Big Data Security, School of
+Cyber Science and Engineering, HUST.. He is also an associate editor for
+IEEE Transactions on Network Science and Engineering. His current research
+interest includes: security and privacy, Big Data analytics, machine learning,
+and information networks.
+Hao Li is currently an associate researcher in the
+Institute of Software at China Coal Research Institute.
+Hao’s research interests include coal mine intellec-
+tualization, automation of fully mechanized mining
+face, edge computing, AI and Internet of Things.
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:58:40 UTC from IEEE Xplore.  Restrictions apply. 

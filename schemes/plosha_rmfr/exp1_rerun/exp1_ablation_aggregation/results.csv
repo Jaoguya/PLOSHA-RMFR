@@ -1,0 +1,2 @@
+variant,num_sensors,aggregation_latency_ms,std_aggregation_latency,processing_overhead_ms,std_processing_overhead,loss_exposure_fraction,std_loss_exposure,energy_joules,std_energy_joules,recomputation_overhead_ms,std_recomputation_overhead,reused_microslot_count,std_reused_microslot_count
+fixed_slot,5000.000000,45.189616,5.007618,45.137837,4.992201,0.081489,0.046538,6.770676,0.748830,0.005915,0.003157,0.000000,0.000000

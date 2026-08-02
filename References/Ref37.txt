@@ -1,0 +1,1465 @@
+44
+IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 19, NO. 1, JANUARY/FEBRUARY 2026
+A Hybrid Fault-Tolerant Workﬂow Scheduling With
+Performance Fluctuated Cloud Resources
+Qian Ren
+and Guangshun Yao
+Abstract—With the increasing complexity of cloud systems, re-
+source performance ﬂuctuation and failure have become two signif-
+icant factors that affect task execution in the cloud, particularly for
+workﬂow tasks with precedence constraints. The former often leads
+to uncertain task execution time, while the latter can result in task
+abortion. Although many cloud workﬂow scheduling algorithms
+have been proposed for fault tolerance or uncertain task execution
+time separately, these two issues simultaneously exist in practice
+and have not yet been thoroughly explored. This article proposes
+a hybrid fault-tolerant cloud workﬂow scheduling algorithm de-
+signed to study the failures of cloud resources and uncertain task
+execution time simultaneously. The proposed scheduling process
+consists of four phases: preprocessing, initial scheduling, online
+scheduling, and online adjustment. Two fundamental and widely
+recognized strategies for fault tolerance, replication and resub-
+mission, are integrated into the algorithm. An elastic resource
+provisioning mechanism is also designed to adjust active resources
+dynamically.Performanceevaluationsonbothrandomlygenerated
+and real-world workﬂows demonstrate that the algorithm effec-
+tively schedules deadline-constrained workﬂows under uncertain
+task execution time while guaranteeing fault tolerance.
+Index Terms—Cloud workﬂow scheduling, fault tolerance,
+performance ﬂuctuation, resubmission, replication.
+I. INTRODUCTION
+M
+ANY intricate issues are often composed of hundreds
+or even thousands of tasks with interdependent rela-
+tionships, and can be referred to as workﬂows [1], [2]. These
+workﬂows are frequently time-bound and necessitate mas-
+sive and distributed computing resources for punctual execu-
+tion. In recent times, cloud services have been increasingly
+utilized for these workﬂows due to the decrease in utiliza-
+tion costs and ﬂexibility of computing power. Particularly,
+Received 28 April 2025; revised 1 November 2025; accepted 13 November
+2025. Date of publication 21 November 2025; date of current version 5 Febru-
+ary 2026. This work was supported in part by the Anhui Provincial Natural
+Science Foundation under Grant 2408085MF177, in part by the Key Project
+of Anhui University Science Research under Grant 2023AH051629, Grant
+2023AH040221, and Grant KJ2021A1064, in part by the Open Project of State
+Key Laboratory for Novel Software Technology under Grant KFKT2025B36,
+in part by the Anhui Provincial Leading Project for Academic Disciplines under
+GrantDTR2025051,andinpartbytheChuzhouUniversityResearchFoundation
+under Grant 2022XJZD15 and Grant 2022XJYB04. (Corresponding author:
+Guangshun Yao.)
+Qian Ren is with the College of Computer and Information Engineer-
+ing, Chuzhou University, Chuzhou 239000, China (e-mail: renqian99@
+chzu.edu.cn).
+GuangshunYaoiswiththeCollegeofComputerandInformationEngineering,
+Chuzhou University, Chuzhou 239000, China, and also with the State Key Lab-
+oratory for Novel Software Technology, Nanjing University, Nanjing 210023,
+China (e-mail: yaoguangs@126.com).
+Digital Object Identiﬁer 10.1109/TSC.2025.3635177
+Infrastructure-as-a-Service clouds offer preconﬁgured virtual
+machines(VMs)forleasing,allowingcustomerstoaccessnearly
+unlimited VMs on a pay-per-use basis [2]. While the beneﬁts
+are substantial, the cloud resources have a high probability of
+resource failure due to various factors [3], [4]. Furthermore, each
+cloud server is virtualized into a set of VMs, which share the
+same hardware resources, such as CPU, I/O, storage, and net-
+work. The resource sharing scheme can easily lead to resource
+interference among different VMs on the same server, resulting
+in ﬂuctuations in VM performance and subsequently uncertain
+task execution time [1], [5]. The performance of VMs in the
+Amazon EC2 cloud has been found to exhibit a 24% variation, as
+reported in [6]. Both VM failures and performance ﬂuctuations
+have a signiﬁcant impact on task scheduling, particularly for the
+cases with deadline constraints. For tasks that are precedence
+constrained, such as those in a workﬂow instance, the impact
+is even more serious. This is because the completion delay of
+one task caused by either VM failure or performance ﬂuctuation
+can spread to the tasks on the same VM and further to their suc-
+cessors [4], [7]. Therefore, providing an effective fault-tolerant
+mechanism is mandatory for deadline-constrained workﬂows in
+resource performance ﬂuctuated cloud systems.
+In this paper, we consider the fault-tolerant cloud workﬂow
+scheduling problem with performance ﬂuctuated VMs. The
+tasks in the soft deadline constrained workﬂow are precedence
+constrained and they can be allocated to VMs. VMs are differ-
+ently conﬁgured (CPU and memory) and elastically provisioned
+based on the scheduling requirements, but they are unreliable
+during usage due to performance ﬂuctuation and failure. Dead-
+lines, elastic resource provisioning, performance ﬂuctuation,
+and VM failure are taken into account for the problem under
+study. Replication and resubmission, two fundamental operators
+in most fault-tolerant strategies, are adopted for fault tolerance.
+Replication involves submitting primary and replicate copies
+of a task to different process units simultaneously to achieve
+fault tolerance. Resubmission tries to ﬁnd another alternative
+suitable resource to reexecute the task after a fault occurs [4], [7],
+[8]. The stochastically of task execution time is adopted to deal
+with the uncertain task execution time caused by performance
+ﬂuctuation.
+Failure and performance ﬂuctuation of heterogeneous re-
+sources, elasticity of resource provisioning, and deadline for
+workﬂow instance make the problem difﬁcult, with the main
+challenges being: (i) There is a higher probability that workﬂow
+instances might be ﬁnished before their deadlines if all tasks
+of these instances are assigned to faster VMs. Faster VMs
+1939-1374 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artiﬁcial intelligence and similar technologies.
+Personal use is permitted, but republication/redistribution requires IEEE permission. See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:57:35 UTC from IEEE Xplore.  Restrictions apply. 
+REN AND YAO: HYBRID FAULT-TOLERANT WORKFLOW SCHEDULING WITH PERFORMANCE FLUCTUATED CLOUD RESOURCES
+45
+might be overloaded, which leads to more serious performance
+ﬂuctuation [9] and a higher risk of failure [10] to these VMs.
+Either performance ﬂuctuation or failure of VMs leads to a delay
+in the task completion time. The delay can widely propagate to
+the tasks on the same VM and further to their successors, and
+bring the effected workﬂow instances be completed beyond their
+deadlines. It is hard to satisfy deadline for workﬂow scheduling
+with delay propagation caused by either performance ﬂuctuation
+or failure of heterogeneous VMs. (ii) Though resubmission and
+replication are two fundamental operators for fault tolerance,
+they are suited for execution and scheduling stages respectively,
+and usually conﬂict with each other. Generally, a higher re-
+submission indicates better resource utilization with more time
+consumed whereas more replicates of tasks imply less time
+consumed with worse resource utilization. It is not easy to select
+a fault-tolerant strategy (resubmission, replication or both) for
+each task to enhance resource utilization and to guarantee task
+execution time simultaneously. (iii) For workﬂows with different
+arrival times, the required resources change dynamically. More
+resources should become active if more workﬂows arrive. Some
+resources are converted into the sleep state if fewer resources
+are required. It is difﬁcult to dynamically balance the number of
+resources between active and sleep states.
+In this paper, the HFWPF (Hybrid Fault-Tolerant Cloud
+Workﬂow Scheduling with Performance Fluctuated Resources)
+is proposed for the considered problem. Both the failures and
+performance ﬂuctuation of VMs are considered in HFWPF.
+Replication and resubmission are integrated in HFWPF for fault
+tolerance with high resource utilization and less time consump-
+tion. An elastic resource provisioning mechanism is designed
+and incorporated into HFWPF to adjust active resources dy-
+namically. The main contributions of this paper are as follows.
+r A novel workﬂow scheduling architecture is designed to
+mitigate the delay propagation caused by either perfor-
+mance ﬂuctuation or failure of heterogeneous cloud re-
+sources.
+r A hybrid fault-tolerant strategy integrating resubmission
+with replication is designed to balance resource utilization
+and time consumption for scheduling deadline-constrained
+workﬂows with performance ﬂuctuated cloud resources.
+r An elastic resource partition mechanism is developed. It
+is incorporated in HFWPF to dynamically adjust active
+resources for enhancing resource utilization.
+The rest of this paper is organized as follows. The related
+work is discussed in Section II. In Section III, we describe the
+cloud systems, workﬂow and fault model used in this paper.
+The proposed HFWPF is presented in Section IV and evalu-
+ated in Section V, followed by conclusions and future work in
+Section VI.
+II. RELATED WORK
+As this study is conducted for fault-tolerant cloud workﬂow
+scheduling with performance ﬂuctuated resources, we only fo-
+cus on researches designed on cloud workﬂow scheduling in the
+context of fault tolerance and performance ﬂuctuated resources
+in this section.
+A. Cloud Workﬂow Scheduling With Fault Tolerance
+In the past few decades, many fault-tolerant approaches have
+beenproposedtomitigatetheimpactsofresourcefaults.Qiu[11]
+advised to adopt different fault tolerance strategies for different
+components in a distributed system based on their statistical
+rank. Javadi [12] attempted to predict faults based on fail-
+ure models. Jhawar [13] suggested utilizing third-party fault-
+tolerant mechanisms. However, these approaches often require
+specialized knowledge of the target infrastructure.
+Resubmission is a widely used strategy for fault tolerance
+in distributed systems. It submits and executes the interrupted
+task again on the same or another process unit after a failure. In
+last decades, lots of resubmission based algorithms have been
+proposed for workﬂow scheduling [14], [15]. Less resources are
+consumedbytheseresubmissionbasedalgorithms.Nonetheless,
+resubmission can signiﬁcantly delay the ﬁnish time of tasks
+after failures, which is catastrophic for deadline-constrained
+workﬂows. Furthermore, the uncertain task execution time are
+rarely considered in these algorithms.
+Replication is another fundamental and widely recognized
+technique for fault tolerance and usually consumes less time [7].
+It generates many copies (one primary copy and one or more
+replicate copies) for one task and schedules these copies to
+different process units. If the process unit with the primary copy
+is suspended because of a fault, the replicate copies on other
+process units are executed to guarantee the successful comple-
+tion of this task [7]. In recent years, many replication based
+algorithms have been proposed for fault-tolerant cloud workﬂow
+scheduling [3], [16], [17]. However, these algorithms typically
+consume more resources than resubmission based algorithms
+and have worse resource utilization as additional resources are
+required for the replicate copies. Moreover, these algorithms
+are designed based on deterministic resource performance and
+cannot be used for scheduling with performance ﬂuctuated
+resources.
+Different from the above studies in that it only adopts a single
+fundamental fault-tolerant strategy, Yao [4], Plankensteiner [8]
+and Dong [18] applied both replication and resubmission si-
+multaneously for fault-tolerant workﬂow scheduling. In [4],
+the deadline of a workﬂow instance was divided into multiple
+sub-deadlines for all tasks. Based on the sub-deadline, each
+task selects one strategy from resubmission and replication to
+achieve fault tolerance. In [8], the impact of the resubmission
+of each task was used to adjust the replication size of this
+task to balance resubmission and replication. In [18], deep
+reinforcement learning was used to select the appropriate fault
+tolerantstrategyfromresubmissionandreplicationforeachtask.
+Farid et al. [19] employed replication by running three copies
+of each task on heterogeneous VMs, and used resubmission
+by re-executing tasks whose results have low conﬁdence or
+miss their sub-deadlines. Recently, both Setlur [20] and Li [21]
+integrated checkpoint-restart with replication and resubmission
+for fault-tolerant cloud workﬂow scheduling. Nevertheless, all
+these algorithms are still based on deterministic resource per-
+formance and cannot be used for the problem under this study
+directly.
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:57:35 UTC from IEEE Xplore.  Restrictions apply. 
+46
+IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 19, NO. 1, JANUARY/FEBRUARY 2026
+B. Cloud Workﬂow Scheduling With Performance Fluctuated
+Resources
+Recently, both Chen [1], [5] and Liu [2] proposed online
+scheduling algorithms for deadline-constrained cloud work-
+ﬂows with random arrivals and uncertain task execution time.
+By employing statistical methods to estimate real task execution
+times, Cai et al. [22] introduced an online delay-based dynamic
+algorithm for cloud workﬂow scheduling with stochastic task
+execution time. Rodriguez et al. [23] proposed a meta-heuristic
+method to dynamically rent resource intervals for workﬂows
+with stochastic task execution time. To mitigate the effects
+of performance variation of resources while meeting work-
+ﬂow deadlines, Calheiros et al. [24] utilized budget surplus
+and idle time of provisioned VMs to replicate workﬂow tasks.
+Xing et al. [25] designed a local search-driven periodic schedul-
+ing algorithm that uses task waiting time to alleviate the neg-
+ative effects of uncertain task execution times. Xu et al. [26]
+and Rajput [27] explored real-time workﬂow scheduling on
+multi-cloud systems under stringent deadline constraints and
+uncertain task execution times. Chen [28] and Lin [29] extended
+this research to Edge-Cloud environments. Recently, Pan [30]
+utilized a time-series-based prediction model to predict the time-
+varying performance of VMs, and then scheduled workﬂow
+tasks based on the predicted results. Bader [31] and Yang [32]
+adopted Bayesian linear regression and multilayer neural net-
+works, respectively, to predict uncertain task execution time.
+Moreover, several cloud workﬂow scheduling algorithms have
+been proposed to optimize multiple objectives in the context of
+uncertain task execution time. Qin [33] proposed a scheduling
+algorithm for optimizing workﬂow execution time and monetary
+cost. Ye et al. [34] and Taghinezhad-Niar [35] aimed to optimize
+monetary cost, resource utilization, and workﬂow success ratio.
+However, resource faults, which can lead to disastrous results
+for precedence-constrained tasks in cloud systems, are not con-
+sidered in these algorithms.
+Different from above work, this study considers the fault-
+tolerant cloud workﬂow scheduling problem with performance
+ﬂuctuated resources. Both fault tolerance and performance ﬂuc-
+tuationareconsidered.Tothebestofourknowledge,theproblem
+considered in this paper has not been studied yet even though it
+widely occurs in practice.
+III. SYSTEM MODEL AND PROBLEM FORMULATION
+A. System Model
+In our model, the cloud systems offer a set of M types of
+VMs V M = {vt1, vt2, . . . , vtM} to customers. For example,
+Amazon EC2 provides 9 types of computing optimized C6g
+instances.1 All VMs of the same type vtm have the same ideal
+processing capacity vpm, while VMs from different types are
+heterogeneous and have different processing speeds. The nth
+VM with type vtm is denoted as vmn. The total number of
+active VMs with type vtm is denoted as Nm. All VMs are
+assumed to be located in the same data center or region, so the
+1https://aws.amazon.com/ec2/instance-types/
+Fig. 1.
+Scheduling architecture.
+network bandwidth NB between VMs is roughly equal [3], [4].
+Furthermore, VMs can concurrently receive data when they are
+executing tasks [1]. Empowered by virtualization technology,
+cloud systems provide an illusion of unlimited resources [2],
+[16]. Hence, the number of leased VMs is unlimited in this
+study. Similar to the elastic resource provision adopted by
+Amazon EC2, customers can scale the leased VMs according
+to their requirements. The setup times of VMs are assumed to
+be identical when they are leased and are denoted by Tboot. The
+VMs are only active during their leased time intervals.
+We denote the workﬂow instances as a set of W =
+{w1, . . . , wI}. Each workﬂow instance wi ∈W(1 ≤i ≤I) is
+deﬁned by its arrival time ai, soft deadline di, and structure
+Gi. The structure of wi is further modeled as a directed acyclic
+graph Gi = (Ti, Ei). The set of tasks in wi is denoted as
+Ti = {tis, ti1, . . . , tiJ, tie}, where tis and tie are dummy source
+and sink tasks with 0 execution time. The size of each task
+tij(1 ≤j ≤J) is denoted as Sij. The set of precedence con-
+straints for tasks in wi is represented by Ei = {(tih, tij)|tih ∈
+Ti, tij ∈Ti, h < j}, where (tih, tij) ∈Ei indicates that task
+tij depends on the output of task tih for its execution. Task
+tij can start executing only after receiving all the necessary
+output data from its predecessors, which ensures the hierarchical
+parent-child relationships within a workﬂow instance. The size
+of transferred data from task tih to tij is denoted as Di
+hj,
+and the time used for transferring Di
+hj (denoted as TT i
+hj) is
+Di
+hj/NB if tih and tij are allocated on different VMs, and
+0 otherwise. The set of predecessors of task tij is denoted by
+P(tij).
+For scheduling W, we propose a new scheduling architecture
+as shown in Fig. 1. It consists of a Workﬂow Analyzer, a Task
+Pool (TP), a Resubmission Controller, a Replication Controller,
+and a Resource Manager. For each arriving wi, the Scheduler
+determines whether to accept it through the cooperation of
+workﬂow Analyzer and Resource Manager. If the Scheduler
+cannot ﬁnd a feasible scheduling strategy for wi within the given
+deadline under the ideal state, it rejects wi. Once wi is accepted,
+the proposed HFWPF is invoked. It analyzes the relationship
+among workﬂow tasks and then divide the workﬂow deadline
+into multiple sub-deadlines for all tasks in wi. Thereafter, Work-
+ﬂow Analyzer delivers the source task of wi for scheduling, and
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:57:35 UTC from IEEE Xplore.  Restrictions apply. 
+REN AND YAO: HYBRID FAULT-TOLERANT WORKFLOW SCHEDULING WITH PERFORMANCE FLUCTUATED CLOUD RESOURCES
+47
+also stores other tasks into TP. Only one task is allowed to wait
+on a VM besides the executing task. Therefore, the ﬂuctuation
+of task execution time on a VM only affects the waiting task on
+the same VM.
+For each ready task tij in TP, the Scheduler selects a fault-
+tolerant strategy from resubmission and replication for tij. Re-
+submission is selected if tij has enough time to execute again,
+otherwise replication is selected. Moreover, the Scheduler also
+generates an initial allocation result for tij during the initial
+scheduling process. If tij selects replication for fault tolerance,
+a replicate copy is generated besides the primary one and they are
+allocated to two different VMs. If tij selects resubmission, tij is
+only allocated to one VM during the initial scheduling process.
+If tij is suspended caused by resource failure during the task
+execution process, the Scheduler adopts an online scheduling
+scheme to select a suitable resource for tij. Furthermore, an
+online adjustment scheme is developed to adjust the available
+time slots of some unexecuted tasks according to the task exe-
+cution results during task execution process. It also mitigates
+the propagated impacts of the uncertain task execution time
+caused by the performance ﬂuctuation of VMs. Moreover, an
+elastic resource provisioning mechanism is adopted during the
+whole process to dynamically adjust active resources. When one
+active VM containing tasks with the resubmission strategy fails,
+resubmission is performed immediately.
+Differ from deterministic scheduling that assumes the re-
+source performance and task execution time are deterministic,
+the uncertain scheduling considers the uncertainties in these
+parameters [1]. Previous work have proven that the task exe-
+cution time is subject to normal distributions [2], [22]. In this
+paper, we assume that the task execution time on a performance
+ﬂuctuated VM is a stochastic variable with independent and
+normal distributions. We also assume that the expected value
+and variance of task execution can be estimated by several
+methods [2], [22], which is beyond the scope of this paper. The
+approximate weight used in [2] is adopted as the estimation of
+the task execution time with the stochastic characteristic. Given
+X as the task execution time, the approximate weight w(X) is
+deﬁned as
+w(X) =
+⎧
+⎨
+⎩
+E(X) +
+
+D(X)
+if D(X)
+E(X)2 ≤1
+E(X) ·
+
+1 +
+1
+√
+D(X)
+
+otherwise
+(1)
+where E(X) and D(X) denote the expected value and the
+variance of variable X respectively. Let N(μ, σ2) denote the
+normal distribution with expected value μ and variance σ2. As
+each value of X, X ∼N(μ, σ2), satisﬁes σ/μ2 ≤1, the weight
+of X is expressed as w(X) = E(X) +
+
+D(X) [2].
+Tasks fail when the resource units where they are located
+fail. In this paper, we focus on the failure of VMs. When a
+VM fails, all the tasks on this VM cannot be ﬁnished. It is also
+supposed that there exists a fault-detection mechanism, such
+as heartbeats [15], fail-signal and acceptance test [3], [4], [16],
+to detect failures. The fault detection time is ignored in this
+paper. The faults might be transient or permanent and they are
+assumed to be independent. Each fault only affects a single VM.
+Only one VM is assumed to fail simultaneously at any time. The
+proposed model can be easily extended to the case with multiple
+VM failures in large-scale cloud environments by dividing the
+cloud systems into several small groups. In each small group,
+the proposed model is applied as in [3], [4], [5], [7], [16].
+B. Problem Formulation
+HFWPFaims tomaximizethecompletionqualityof deadline-
+constrained workﬂows in performance ﬂuctuated cloud re-
+sources with fault tolerance. To formulate the scheduling prob-
+lem, we ﬁrst deﬁne some notations.
+Let boolean variable zij ∈{0, 1} represent the fault tolerance
+strategy adopted by task tij. zij = 1 means that tij adopts
+resubmission and zij = 0 implies that tij uses replication. There
+is only one replicate for tij when zij = 0 and the primary copy
+tP
+ij and the replicate copy tR
+ij are executed on two different
+VMs simultaneously. When zij = 0, vP
+ij and vR
+ij denote the VMs
+where tP
+ij and tR
+ij are allocated respectively. For fault tolerance,
+vP
+ij ̸= vR
+ij. Let boolean variables xij
+mn ∈{0, 1} represent alloca-
+tions of tasks to VMs. xij
+mn = 1 if the jth task in wi is allocated
+to vmn, which is the nth VM with type vtm.
+Different from deterministic scheduling, the task execution
+time under this study is uncertain. Only when task tij is exe-
+cuted by a VM successfully, its actual start time ast(tij) and
+the actual ﬁnish time aft(tij) can be obtained. For a given
+workﬂow instance wi, its actual ﬁnish time is equal to aft(tie).
+We deﬁne the completion quality of wi as Qi = max{0, 1 −
+max{0, aft(tie)−di
+di−ai
+}}, where ai and di denote the arrival time
+and soft deadline of wi respectively. If aft(tie) is less than di,
+Qi is set to 1. Otherwise, Qi is measured by the tardiness degree
+between aft(tie) and di. The workﬂow deadline di is a soft
+deadline, meaning that workﬂow instance wi can complete after
+di but with a penalized completion quality Qi. The average
+customer satisfaction Q for all accepted workﬂow instances
+is I
+i=1 Qi/I. A greater Q implies that more instances are
+completed by or near to their deadlines. The considered problem
+is modelled as follows.
+max Q =
+I
+i=1 Qi
+I
+(2)
+s.t.
+Qi = max
+	
+0, 1 −max
+	
+0, aft(tie) −di
+di −ai
+
+
+,
+∀i ∈{1, . . . , I}
+(3)
+aft(tih) + TT i
+hj ≤ast(tij), (tih, tij) ∈Ei
+∀i ∈{1, . . . , I}, ∀h ∈{1, . . . , J}, ∀j ∈{1, . . . , J}
+(4)
+M
+
+m=1
+Nm
+
+n=1
+xij
+mn =
+	
+2 if zij = 0
+1 if zij = 1 ,
+∀i ∈{1, . . . , I}, ∀j ∈{1, . . . , J}
+(5)
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:57:35 UTC from IEEE Xplore.  Restrictions apply. 
+48
+IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 19, NO. 1, JANUARY/FEBRUARY 2026
+I
+
+i=1
+J
+
+j=1
+xij
+mn ≤1, ∀m ∈{1, . . . , M}, ∀n ∈{1, . . . , Nm}
+(6)
+xij
+mn ∈{0, 1}, zij ∈{0, 1}
+(7)
+Exp. (3) describes the completion quality of wi with a arrival
+time ai and a soft deadline di. Exp. (4) indicates the data
+dependencies of tasks in wi. Exp. (5) denotes one task with
+resubmission can be performed only on one VM at a time while
+one task with replication can be performed only on two VMs
+with the same VM type at a time. Exp. (6) describes each VM
+can only perform one task at a time. Exp. (7) denotes the binary
+variables of scheduling for task tij and the binary variables of
+the adoption of a fault-tolerant strategy for tij.
+IV. ALGORITHM IMPLEMENTATION
+The proposed HFWPF has four main phases: Preprocessing,
+Initial Scheduling, Online Scheduling and Online Adjustment. It
+is motivated on receipt of two monitor signals: the new workﬂow
+instance arrival signal and the task execution completion signal.
+When receiving a new workﬂow instance wi with arrival
+time ai and soft deadline di, the scheduler takes a simulated
+scheduling by NOSF [2], which ia a cloud workfolw scheduling
+algorithm with uncertain task execution time, and then gets the
+makespan (smsi) before real scheduling. If di −ai ≥smsi, wi
+is accepted and the Preprocessing phase is trigged. Otherwise,
+wi is returned to user for revising the deadline. For the accepted
+wi, the time interval between ai and di is divided into multiple
+sub-deadlines for all tasks in wi. Thereafter, tis ∈Ti is delivered
+to the Initial Scheduling phase, and other tasks are stored into
+TP.
+When receiving a task execution completion signal, the sched-
+uler ﬁnds the ready tasks in TP. A workﬂow task is deﬁned as
+ready if this task has no predecessor, i.e., P(tij) = φ, or all the
+immediate predecessor tasks of this task have been mapped to
+VMs and at least one predecessor task has been completed [1].
+Foreachreadytasktij inTP,theInitialSchedulingdeterminesits
+fault-tolerant strategy, and also reserves corresponding resource
+and serve time.
+During the task execution process, if a task with resubmission
+encounters a fault, the Online Scheduling is trigged to select a
+suitable VM for executing it again. To make full advantage of
+time slot, an Online Adjustment scheme is designed to adjust
+sub-deadlines of some unexecuted tasks. The HFWPF is for-
+mally described in Algorithm 1.
+A. The Preprocessing Phase
+It is obviously that if each task in wi is completed in/near its
+sub-deadline, wi is ﬁnished within/near its deadline [4]. For an
+accepted instance wi, the Preprocessing phase divides the time
+slot between ai and di to multiple sub-interval for each task
+in wi. Lots of deadline division studies have been reported in
+last decades [2], [4], [36]. However, the approaches in both [4]
+and [36] are designed under deterministic task execution time
+while the method in [2] is tailored for uncertain task execution
+Algorithm 1: HFWPF().
+time. Therefor, we adopt the method proposed in [2] in this
+study.Moredetailsaboutthealgorithmfordeadlinedivision,i.e.,
+PrePro() in Line 5 in Algorithm 1, can refer to [2]. Thereafter,
+each task tij in Ti has a initial available time slot [stij, dlij],
+where stij and dlij are the start time and sub-deadline of tij
+respectively.
+According to [2], the time complexity of PrePro() for process-
+ing an arrival workﬂow wi is O(J2), where J is the number of
+tasks in workﬂow wi.
+B. Initial Scheduling
+For each ready task in TP, Initial Scheduling selects a cor-
+responding fault-tolerant strategy from either resubmission or
+replication for this task. It also schedules this task to suit-
+able VMs. In the following, we introduce some deﬁnitions
+for Initial Scheduling. Let w(etij
+mn) denote the approximation
+weight of the stochastic execution time etij
+mn for task tij on
+VM vmn and can be calculated by Exp. (1). Let ψ(tij) de-
+note the minimum etij
+mn for task tij on all active VMs, i.e.,
+ψ(tij) = minm∈{1,...,M}{minn∈{1,...,Nm} {etij
+mn}}.
+Previous studies have shown that resubmission is a time
+consuming strategy for fault tolerance [4], [8]. In this paper, a
+workﬂow task tij ∈Ti selects resubmission as its fault-tolerant
+strategy and zij is set to 1 if
+dlij −stij ≥2 × (Tboot +
+max
+tih∈P (tij) {TT i
+hj} + ψ(tij)), (8)
+in which Tboot is the VM initial boot time. Otherwise, tij selects
+replication and zij is set to 0. When zij = 1, we deﬁne the exe-
+cution before and after fault as initial execution and reexecution
+respectively.
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:57:35 UTC from IEEE Xplore.  Restrictions apply. 
+REN AND YAO: HYBRID FAULT-TOLERANT WORKFLOW SCHEDULING WITH PERFORMANCE FLUCTUATED CLOUD RESOURCES
+49
+After selecting a fault-tolerant for tij, it is also need to sched-
+ule tij to suitable VMs. When zij = 0, two VMs are required
+for tP
+ij and tR
+ij respectively for fault tolerance. The sub-deadlines
+for tP
+ij and tR
+ij are identical and equal to dlij. When zij = 1, if
+a VM fault happens during the initial execution process of tij,
+the reexecution process is required to be completed before its
+sub-deadline dlij. The minimum time for the reexecution of tij
+(denoted as rexij) should contain Tboot, maxtih∈P (tij) {TT i
+hj}
+and ψ(tij) at least, i.e.,
+rexij = Tboot +
+max
+tih∈P (tij) {TT i
+hj} + ψ(tij).
+(9)
+Therefore, the sub-deadline for the initial execution of tij is
+dlij −rexij.
+After selecting the fault tolerant strategy and deciding the
+sub-deadline for ready task tij, Initial Scheduling needs to ﬁnd
+a suitable VM for tij. It ﬁrst tries to allocate tij to an active VM.
+If no active VM can satisfy the scheduling requirement of tij, a
+new VM is activated and tij is allocated to this VM.
+For ready task tij to be allocated on active VM vmn, we use
+pstij
+mn to denote the predicted start time of task tij as
+pstij
+mn = max
+	
+pftxy
+mn,
+max
+tih∈P (tij)
+
+aftih
+m′n′ + TT i
+hj
+
+,
+(10)
+where pftxy
+mn and aftih
+m′n′ indicate the predicted ﬁnish time of
+task txy on VM vmn and the actual ﬁnish time of task tih on
+VM vm′n′ respectively. tih is one predecessor of tij. TT i
+hj = 0
+if vmn = vm′n′. The predicted ﬁnish time pftij
+mn of task tij on
+VM vmn can be expressed as
+pftij
+mn = pstij
+mn + w
+
+etij
+mn
+
+.
+(11)
+For one ready task tij with time slot [stij, dlij] and one active
+VM vmn, if
+pstij
+mn ≥stij
+and dlij ≥pftij
+mn
+(12)
+is satisﬁed, vmn becomes one ready VM for tij and is added into
+RVij, which denotes the set of ready VMs for tij. If multiple
+active VMs satisfy Exp. (12), different selections are adopted for
+tasks with different fault-tolerant strategies. If zij = 1, in order
+to reserve enough time for the reexecution, the ready VM with
+maximum processing capacity is selected. If zij = 0, the ready
+VM with minimum processing capacity is selected to reduce the
+user cost as the VMs with higher processing capacity are usually
+more expensive. It is worthy noting that vP
+ij ̸= vR
+ij if zij = 0.
+If no active VM can satisfy Exp. (12), some new VMs (the
+predicted start time of these VMs is Tboot) that meet Exp. (12)
+are activated and tij is allocated to these VMs. However, if
+no VM can satisfy Exp. (12) even new VMs are activated,
+i.e.,dlij < pftij
+mn, the VM with the closest value to dlij is
+selected as exceeding one subdeadline for a speciﬁc task does
+not mean missing of the whole workﬂow instance deadline.
+The Initial Scheduling procedure is formally described in Al-
+gorithm 2. The pseudo-code for Allocate() used in Algorithm 2 is
+described in Algorithm 3. As two different VMs are required for
+task with replication while only one VM is required for task with
+resubmission, the scheduling process for task with replication is
+different from the process for task with resubmission as shown
+in Algorithm 3.
+Algorithm 2: InitialSch().
+Algorithm 3: Allocate().
+In analyzing the time complexity of Algorithm 2 for pro-
+cessing workﬂow wi, it becomes evident that the complexity of
+Lines 6–7 aligns with that of Lines 3–4 within the same algo-
+rithm. Consequently, we focus on the time complexity of Lines
+2–4 in Algorithm 2. Let NM represent the number of active
+VMs with VM type vtM, which holds the maximum number
+of active VMs across all types, and let Nin be the maximum
+indegree among the tasks in wi. For each task tij, Algorithm 2
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:57:35 UTC from IEEE Xplore.  Restrictions apply. 
+50
+IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 19, NO. 1, JANUARY/FEBRUARY 2026
+necessitates traversing all active VMs to compute ψ(tij) , which
+is subsequently used in Exp. 8 (line 2 in Algorithm 2). This
+computation requires time O(JMNM) at the worst-situation,
+where M denotes the number of VM types in our model. The
+temporal complexity of line 3 in Algorithm 2 stands at O(1).
+The complexity of line 4 in Algorithm 2 is determined by
+Algorithm 3. Within lines 3-7 of Algorithm 3, task tij needs to
+traverse its all predecessors and all active VMs for calculating
+pstij
+mn and pftij
+mn by Exp. (10) and Exp. (11). These calculated
+values are then compared with all all active VMs by Exp. (12.
+As a result, under worst-case scenarios, the time complexity
+for lines 3-7 in Algorithm 3 is O(NinMNM). Regarding the
+remainder of Algorithm 3, the time required traversing the set
+of ready VMs RV can be regarded as a constant since the number
+of VMs in RV is far less than that of active VMs. In summation,
+the time complexity of Algorithm 3 is O(NinMNM), and thus,
+the complexity of Algorithm 2 coalesces to O(JMNM + 1 +
+NinMNM) = O((J + Nin)MNM).
+C. Online Scheduling and Online Adjustment
+During the task execution process, when zij = 0, tij is always
+completed successfully even if one VM failure or performance
+ﬂuctuation occurs. This is because that two VMs are selected to
+execute tP
+ij and tR
+ij simultaneously and only one copy may meet
+a fault under the proposed model. When zij = 1, tij is also
+ﬁnished if no fault occurs during its initial execution processes.
+If a fault happens, it is necessary to ﬁnd another VM for the ﬁrst
+reexecution of tij as its deadline can allow it to execute at least
+twice.
+Let FTij denote the time at which the fault is detected
+during the initial execution processes of tij with resubmission.
+Obviously, dlij > FTij > stij. Afterwards, we set the start time
+and sub-deadline of tij as FTij and dlij for the ﬁrst reexecution
+of tij respectively. Algorithm 3 is used again to ﬁnd a suitable
+VM for the ﬁrst reexecution of tij.
+If no fault occurs during the ﬁrst reexecution of tij, tij is
+completed successfully. However, if the ﬁrst reexecution of tij
+encounters another fault at time FT ′
+ij, the remaining time for tij
+is dlij −FT ′
+ij. In this case, it is required to reselect the fault-
+tolerant strategy for tij as its remaining available time may not
+be enough to get another reexecution done. The start time and
+sub-deadline of tij are set as FT ′
+ij and dlij respectively. Then,
+the same procedure in Algorithm 2 is used to select a suitable
+fault-tolerant strategy and ﬁnd a suitable VM for tij. If a resource
+failure occurs during the second and subsequent re-executions
+of tij, the same process described above will still be followed.
+The Online Scheduling procedure is formally described in
+Algorithm 4. Noticeably, both the Initial Scheduling and Online
+Scheduling incorporate elastic resource provisioning to improve
+resource utilization as shown in Algorithms 3 and 4. Similar
+to previous works such as [2] and [4], new VMs are activated
+if the active VMs cannot satisfy the scheduling requirements.
+However, unlike these works kept VMs active during their leased
+time intervals, in the HFWPF algorithm, VMs become active
+only when they execute tasks or are waiting for tasks, and the
+waiting time is less than Tboot. Otherwise, the VMs are shut
+Algorithm 4: OnlineSch().
+Algorithm 5: OnlineAdj().
+down immediately to enhance resource utilization and reduce
+the likelihood of VM failures caused by prolonged idleness.
+After all the predecessor tasks of tik have been completed,
+the start time stik of tik is adjusted to
+stik =
+max
+tij∈P (tik)
+
+aft(tij) + TT i
+jk
+
+.
+(13)
+The Online Adjustment procedure is formally described in
+Algorithm 5. By the above scheduling, the HFWPF tries to
+complete each workﬂow task within or near its sub-deadline
+as it reserves corresponding serve time interval for every possi-
+ble resource fault and performance ﬂuctuation. In cases where
+some considered faults and performance ﬂuctuations do not
+occur in the actual execution process, some tasks can ﬁnish
+before their sub-deadlines. These time intervals between the
+actual ﬁnish times and sub-deadlines are then used to expand
+the deadlines of waiting workﬂow tasks through the proposed
+adjustment scheme, effectively alleviating their time constraints.
+Furthermore, this scheme promotes unexecuted tasks to switch
+from replication to resubmission as a means of fault tolerance,
+resulting in reduced resource consumption.
+We now analyze the complexity of Algorithms 4 and 5 respec-
+tively. The time complexity of Algorithm 4 is obversely equal
+to that of Algorithm 2, i.e., O((J + Nin)MNM). For Algo-
+rithm 5, each task tij ∈Ti needs to traverse its all predecessors
+for obtaining aftij in Line 3, which is used to adjust stik in
+Line 4. Therefore, the time complexity of Algorithm 5 is
+O(JNin) at the worst-situation.
+V. PERFORMANCE EVALUATION
+To the best of our knowledge, there have been no studies
+on fault-tolerant cloud workﬂow scheduling with performance
+ﬂuctuating resources. In this paper, we conduct a series of
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:57:35 UTC from IEEE Xplore.  Restrictions apply. 
+REN AND YAO: HYBRID FAULT-TOLERANT WORKFLOW SCHEDULING WITH PERFORMANCE FLUCTUATED CLOUD RESOURCES
+51
+experiments to demonstrate the performance of HFWPF. We
+compare it with one of its variants, NEHFWPF (Non-Elastic-
+HFWPF), which refrains from utilizing elastic resource pro-
+visioning and maintains all VMs active for scheduling. The
+quantity of active VMs is set to match the maximum number
+of tasks at each layer in the test workﬂow instance. Addition-
+ally, we compare HFWPF with two existing cloud workﬂow
+scheduling algorithms: NOSF [2] and ICFWS [4]. NOSF is an
+onliNe multi-workﬂOw Scheduling Framework for scheduling
+deadline-constrained workﬂows with random arrivals and un-
+certain task execution time. Its primary objective is to min-
+imize rental costs while enhancing resource utilization. The
+scheduling process in NOSF consists of three phases: work-
+ﬂow preprocessing, VM allocation and feedback process. In
+the initial phase, the framework determines task priorities for
+each incoming workﬂow instance. The second phase involves
+heuristically assigning a VM with available billing time to
+tasks that are prepared for scheduling. The ﬁnal phase adap-
+tively adjusts the originally assigned priorities and subdead-
+lines of the tasks ready for scheduling, such that the deadline
+of the workﬂow instance can be met. Notably, NOSF does
+not account for cloud resource failures. Consequently, in our
+experimental scenario where a task in NOSF experiences a
+resource failure, it is dynamically reassigned to another suit-
+able VM during the experiments. ICFWS is designed for a
+single workﬂow under deterministic task execution time and
+uses a similar fault-tolerance method as the proposed HFWPF.
+To enable ICFWS to handle multiple workﬂows, we trigger
+it to schedule all workﬂow tasks as soon as a new workﬂow
+arrives. The above algorithms are compared from the following
+metrics:
+1) Quality of Task Completion (QTC) is deﬁned as Exp. (2),
+reﬂecting the task completion quality of the compared
+algorithms in the context of soft deadlines, faults and
+resource performance ﬂuctuation.
+2) VMs Reserve Time Rate (VRTR) is deﬁned as the ratio
+of the total active time of all VMs in the context of fault
+and performance ﬂuctuation over the total serve time of
+all VMs under ideal status got by HEFT [37], reﬂecting
+the system resource consumption cost of the compared
+algorithms under fault and performance ﬂuctuation.
+Similar to [3], [4], [5], [7], [16], the following assumptions
+are adopted in our experiments: (1) All VMs are co-located
+within the same data center, (2) All VMs are interconnected with
+identicalandstablenetwork,(3)AllVMsexhibituniformstartup
+times, (4) Only a single VM fails at any given instance, and each
+VM failure is an independent event. Besides the task execution
+time, our experiments account for the time required to transfer
+databetweenpairsofVMs,denotedasTT i
+hj inExps.(4),(8),(9),
+and (10), and TT i
+jk in Exp. (13). Additionally, our experiments
+consider the setup times of VMs, represented by Tboot in Exps.
+(8) and (9). However, the duration for cloud fault detection is
+not included, as effective fault detection algorithms can identify
+system failures within just one second [38], [39]. The subsequent
+sections detail experiments conducted under various conditions,
+each replicated 100 times, with the reported results representing
+the averaged outcomes.
+TABLE I
+CONFIGURATIONS FOR THE USED VMS
+TABLE II
+PARAMETERS FOR THE GENERATED WORKFLOWS
+A. Evaluation on Simulated Cloud Platform With Randomly
+Generated Workﬂows
+1) Experimental Setting: To observe the performance of the
+compared algorithms, we ﬁrst conduct the experiments on ran-
+domly generated workﬂows, which is published by the DAG
+generator tool.2 Five parameters, i.e., task number, width, reg-
+ularity, density and jumps, are used to deﬁne the workﬂow
+instance shape as shown in Table II. More detail about these
+parameters can be found in [3], [4]. To clearly analyze the
+performance of the compared algorithms, the experiments are
+conducted on WorkﬂowSim [40], which is a popular simulation
+toolkit for cloud workﬂow scheduling [3], [4], [15]. 5 types of
+VMs are simulated for experiments as shown in Table I. The VM
+conﬁgurations are set by referring to the instances in Amazon
+EC2.3 According to [7], the initial boot time for a VM (Tboot) is
+set to 15 seconds, and the network bandwidth (NB ) between
+VMs is conﬁgured to be 10 Gbps.
+For each generated workﬂow instance, the deadline is set as
+follows.
+di = ai + α × smsi,
+(14)
+where α is a deadline factor which reﬂects how tight or loose
+the workﬂow deadlines are. For task tij located on VM vmn
+with ideal processing capacity vpm, its task execution time
+etij
+mn is modelled as a stochastic variable following the normal
+distribution with the expected value μ(etij
+mn) and the variance
+σ(etij
+mn)2, we set μ(etij
+mn) and σ(etij
+mn) as
+μ
+
+etij
+mn
+
+= Sij
+vpm
+, σ
+
+etij
+mn
+
+= μ
+
+etij
+mn
+
+× β,
+(15)
+where β is a variance factor that indicates the ﬂuctuation of the
+task execution time caused by the performance ﬂuctuation of
+VMs. Inour experiments, thetaskexecutiontimeetij
+mn is deﬁned
+using a normal random number generator with the expected
+value of μ(etij
+mn) and the standard deviation of σ(etij
+mn).
+2https://github.com/frs69wq/daggen
+3https://aws.amazon.com/cn/ec2/previous-generation/
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:57:35 UTC from IEEE Xplore.  Restrictions apply. 
+52
+IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 19, NO. 1, JANUARY/FEBRUARY 2026
+TABLE III
+PARAMETERS OF THE SIMULATION
+Fig. 2.
+Performance impact on QTC as a function of α.
+For each workﬂow instance, four parameters are utilized for
+evaluation: the deadline factor α, the task execution time vari-
+ance factor β, the VM failure rate (FR), and the communication
+to computation ratio (CCR). The CCR is deﬁned as the ratio
+of the average communication cost to the average computation
+cost. A higher CCR indicates a relatively greater communication
+load compared to the computation load. The ﬁrst parameter
+reﬂects the impact of the workﬂow instance deadline on the
+performance of the algorithms being compared. The subsequent
+two parameters are used to indicate the inﬂuence of resource
+characteristics, such as performance ﬂuctuations and failures,
+on the performance. The ﬁnal parameter assesses the impact of
+varying workﬂow structures on the performance of the algo-
+rithms under comparison.
+For randomly generated workﬂows, we change a single pa-
+rameter from α, β, FR and CCR while keeping the other param-
+eters ﬁxed in each group of experiments. Table III presents the
+parameters and their values for the simulations.
+2) Performance Impact of Deadlines: First, we study the
+performance impact of the deadline factor α , which increases
+from 0.5 to 2.5in steps of 0.5. β, FR and CCR are set to 0.3,
+7.5% and 1 respectively.
+The impact on QTC as a function of the deadline factor α is
+shown in Fig. 2, which shows that the QTCs of all algorithms
+show an increasing trend with an increase in α. The reason lies
+in that the available time slots for each task become looser and
+looser with the increase in α. As a result, more and more tasks
+are ﬁnished before the deadlines of workﬂow instances. For
+each α, Fig. 2 also shows that HFWPF and NEHFWPF yield
+similar results of QTCs, and both of them are better than the
+other algorithms. This result is attributed to the fact that both
+uncertain task execution time and resource failure are considered
+in HFWPF and NEHFWPF, while only one issue is taken into
+account in either NOSF or ICFWS. Any unconsidered aspect
+will inevitably lead to a decline in QTC. The unaccounted ﬂuc-
+tuation of task execution time lowers the QTCs of ICFWS, which
+Fig. 3.
+Performance impact on VRTR as a function of α.
+solely considers resource failure. The unconsidered resource
+failure brings down the QTCs of NOSF, which only focuses on
+uncertain task execution time. Although NOSF reallocates the
+task on failed VM to another suitable VM for fault tolerance,
+the process of ﬁnding suitable VM for reallocation takes some
+time and thus brings down the QTCs of NOSF.
+The impact on VRTR as a function of the deadline factor
+α is shown in Fig. 3, which indicates that both HFWPF and
+ICFWS have a decreasing trend of VRTRs with an increase
+in α while the other two algorithms maintain essentially un-
+changed VRTR values. Fig. 3 also indicates that NEHFWPF
+has the highest VRTR values under each α and ICFWS gets
+the intermediate results. Furthermore, NOSF produces the best
+results of VRTRs for the ﬁrst two levels of α while HFWPF
+obtains the best results at the other levels. This phenomenon
+can be attributed to the different resource provision schemes
+and fault tolerance strategies employed by each algorithm. NE-
+HFWPF is the only algorithm that keeps all VMs active without
+elastic resource provisioning, resulting in the highest and most
+stable VRTRs. ICFWS, HFWPF, and NEHFWPF adopt both
+replicationandresubmissionforfaulttolerance.Astheworkﬂow
+deadline becomes tighter (smaller α), more tasks choose to
+use replication for fault tolerance. Conversely, as the workﬂow
+deadline becomes looser (larger α), more tasks switch from
+replication to resubmission, which consumes less resources than
+replication [4], [8]. Therefore, as α increases, the consumed
+resources decrease, leading to the decreasing trend in VRTR
+values observed in HFWPF and ICFWS. However, HFWPF con-
+siders both resource failure and uncertain task execution time,
+while ICFWS only focuses on fault tolerance. The unconsidered
+uncertain task execution time in ICFWS leads to higher resource
+consumption and thus higher VRTR values. NOSF is designed
+for cloud workﬂow scheduling with uncertain task execution
+time and resubmits tasks on failed resources in our simulations.
+NOSF achieves the best VRTR values when α is less than 1.5
+because it only uses resubmission for fault tolerance, while the
+other algorithms use both replication and resubmission when α
+is less than 1.5. When α is no less than 1.5, almost all tasks use
+resubmission for faults. In this case, the different VM active
+schemes result in different VRTR values. NOSF keeps VMs
+active during their leased time intervals, with some unused time
+slots within these intervals. In contrast, HFWPF keeps VMs
+active only when they are executing tasks or waiting for tasks
+with a waiting time less than Tboot. If not, the VMs are shut down
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:57:35 UTC from IEEE Xplore.  Restrictions apply. 
+REN AND YAO: HYBRID FAULT-TOLERANT WORKFLOW SCHEDULING WITH PERFORMANCE FLUCTUATED CLOUD RESOURCES
+53
+Fig. 4.
+Performance impact on QTC as a function of β.
+Fig. 5.
+Performance impact on VRTR as a function of β.
+immediately. Therefore, HFWPF achieves better VRTR values
+than NOSF when α is no less than 1.5.
+By considering both QTC and VRTR, it is evident that the
+proposed HFWPF outperforms all other tested algorithms in
+terms of higher task completion quality and lower resource con-
+sumption.Thisisbeneﬁcialforbothusersandresourceproviders
+in cloud environments as users can receive satisfactory services
+for their submitted workﬂows while resource providers can serve
+more users with the same resources, thereby increasing their
+revenues [4], [7]. Therefore, HFWPF is more valuable compared
+to its competitors for both users and resource providers.
+3) Performance Impact of Resource Performance Fluctua-
+tion: We now focus on the performance impact of the task
+execution time variance factor β , which increases from 0.1 to
+0.5in steps of 0.1. α, FR and CCR are set to 1.5, 7.5% and 1
+respectively.
+The impact on QTC as a function of β is shown in Fig. 4,
+which shows that all algorithms keep a decreasing trend of QTC
+with the increase of β. This is because ﬂuctuations in resource
+performance cause the resource processing speed to decrease,
+resulting in lower than normal performance. Consequently, the
+average task execution time increases with the increase of β,
+leading to a decline in QTC for all algorithms. Fig. 4 also reveals
+that HFWPF and its variant NEHFWPF have similar QTC values
+and both of them outperform NOSF and ICFWS, which have the
+lowest QTC values among all algorithms. The reasons for this
+are the same as those explained in Fig. 2.
+Fig. 6.
+The impact on QTC as a function of FR.
+The impact on VRTR as a function of β is shown in Fig. 5,
+which indicates that NEHFWPF maintains constant VRTR val-
+ues with the increase of β while the others exhibit an in-
+creasing trend in VRTR. Furthermore, Fig. 5 also indicates that
+HFWPF achieves the best VRTR results among all algorithms.
+NEHFWPF keeps all VMs active regardless of resource perfor-
+mance, resulting in the highest and consistent VRTR values. For
+the other three algorithms, ﬂuctuations in resource performance
+bring down the resource processing speed, as explained in Fig. 4.
+This leads to increased resource consumption and a subsequent
+decrease in their VRTR values. The reasons for HFWPF’s supe-
+rior VRTR results are the same as those explained in Fig. 3.
+4) Performance Impact of Resource Failures: We now turn
+to the performance impact of the VM failure rate FR, which
+increases from 2.5% to 12.5% in steps of 2.5%. α, β and CCR
+are set to 1.5, 0.3 and 1 respectively.
+The impact of failure rates FR on QTC is illustrated in
+Fig. 6, which shows that all algorithms exhibit a decreasing
+trend in QTC as FR increases. This is because all algorithms
+employ resubmission as a fault-tolerant strategy for either all
+or partial tasks. Speciﬁcally, HFWPF, NEHFWPF, and ICFWS
+use resubmission for partial tasks, while NOSF employs it for
+all tasks. As FR increases, more resources fail, necessitating
+more resubmissions. Consequently, fewer tasks are completed
+by their sub-deadlines, leading to lower QTC values. Fig. 6 also
+reveals that HFWPFandNEHFWPFachievesimilar QTCvalues
+and outperform NOSF and ICFWS. This is because HFWPF
+and NEHFWPF consider both resource failure and performance
+ﬂuctuation, whereas NOSF and ICFWS only consider one of
+these factors.
+The impact of FR on VRTR is shown in Fig. 7, which indicates
+that NEHFWPF keeps stable and the highest VRTR values under
+differentFRswhileHFWPF,NOSFandICFWShaveanincrease
+tendencies in VRTR with the increase in FR. The NEHFWPF
+holds stable and the highest VRTR values. The reason lies in
+that all VMs in NEHFWPF are kept active, no matter how
+many failures happen. The other three algorithms adopt elastic
+resource provisioning mechanism and active VMs according to
+the scheduling requirement. Moreover, they all take resubmis-
+sion as a fault-tolerant strategy for either all or partial tasks. As
+FR increases, more and more tasks, which select resubmission
+as fault-tolerant strategy in initial scheduling phase, fail and
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:57:35 UTC from IEEE Xplore.  Restrictions apply. 
+54
+IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 19, NO. 1, JANUARY/FEBRUARY 2026
+Fig. 7.
+The impact on VRTR as a function of FR.
+Fig. 8.
+The impact on QTC as a function of CCR.
+then require additional VMs for resubmission. Consequently,
+more VMs are activated, leading to larger VRTR values. Fig. 7
+also reveals that HFWPF has the best VRTR values among all
+algorithms. The reasons for this are the same as those explained
+in Fig. 3.
+5) Performance Impact of CCRs: We also study the perfor-
+mance impact of CCR, which increases from 0.8 to 1.2 in steps
+of 0.1. α, β and FR are set to 1.5, 0.3 and 7.5% respectively.
+The inﬂuence of CCR on QTC is depicted in Fig. 8, from
+which we can observe that the proposed HFWPF achieves the
+best results among all compared algorithms, despite the fact
+that all algorithms exhibit large QTC values for different CCRs.
+The reasons are similar to those explained for Fig. 3. Fig. 8
+also indicates that each of the compared algorithms exhibits a
+decreasing trend in QTC with an increase in CCR. The reason
+for this lies in the fact that the number of edges, along with the
+dependencies among tasks, increases with the increase of CCR.
+The increasing interdependencies between tasks can lead to a
+situation where the delayed completion time of one task, caused
+byresourcefailuresoruncertaintaskexecutiondurations,affects
+an ever-growing number of other tasks. Therefore, the QTCs
+decrease with an increase in CCR.
+The inﬂuence of CCR on VRTR is depicted in Fig. 9, illustrat-
+ing that all compared algorithms exhibit a decreasing trend in
+VRTR as CCR increases. The reason for this is that a VM allo-
+cated to a task must remain active for either task communication
+or task execution. An increase in CCR corresponds to an increase
+in average communication time and a decrease in average task
+execution time. The reduction in task execution time results in
+Fig. 9.
+The impact on VRTR as a function of CCR.
+Fig. 10.
+The structures of four real-world workﬂows.
+smaller VRTR values for all compared algorithms. Additionally,
+the average communication time further diminishes VRTRs, as
+successful communication requires at least two active resources,
+leading to the use of more VMs. Nevertheless, HFWPF achieves
+the best VRTRs among all compared algorithms across different
+CCRs, conﬁrming that HFWPF consumes the fewest resources.
+B. Evaluation on Simulated Cloud Platform With Real-World
+Workﬂows
+Besides randomly generated workﬂows, four real-world
+workﬂows as shown in Fig. 10, i.e., Montage, CyberShake,
+Epigenomics and Inspiral [41], are selected to evaluate the
+algorithms. These workﬂows have been widely used to measure
+the performance of scheduling algorithms [1], [2], [3], [4]. The
+features of these instances used in our experiments are given in
+Table IV. More detail on these workﬂows were given in [41].
+The deadline of each workﬂow instance, the expected value and
+variance of task execution time are set by Exp. (14) and Exp.
+(15), where α and β are set to 1.5 and 0.3 respectively. FR is set
+to 7.5% in this section.
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:57:35 UTC from IEEE Xplore.  Restrictions apply. 
+REN AND YAO: HYBRID FAULT-TOLERANT WORKFLOW SCHEDULING WITH PERFORMANCE FLUCTUATED CLOUD RESOURCES
+55
+TABLE IV
+PARAMETERS FOR THE REAL-WORLD WORKFLOWS
+TABLE V
+PERFORMANCE FOR REAL-WORLD WORKFLOWS
+The experimental results are presented in Table V, which
+demonstrate that HFWPF outperforms other algorithms in prac-
+tical scenarios. In terms of QTCs, HFWPF achieves the best
+outcomes for two real-world workﬂows: Epigenomics and In-
+spiral, while NEHFWPF yields the best results for Montage
+and CyberShake. Furthermore, both HFWPF and NEHFWPF
+surpass the other two algorithms. NEHFWPF obtains the highest
+QTC values on Montage and CyberShake because all available
+VMs remain active, and no initial time is required to boot them.
+However, as shown in Table V, HFWPF is only slightly lower
+than NEHFWPF on Montage and CyberShake and performs bet-
+ter on the other workﬂows. This can be attributed to the effective
+algorithm used in HFWPF for handling resource failures and
+performance ﬂuctuations, as discussed in Section IV. Regarding
+VRTRs, HFWPF also achieves the best results. This observa-
+tion once again highlights that HFWPF can effectively reduce
+resource consumption due to its elastic resource provisioning
+and VM shutdown mechanisms. The results further indicate that
+HFWPF can enhance resource utilization and decrease resource
+costs by fully utilizing existing resources while accounting for
+both resource failures and performance ﬂuctuations.
+C. Evaluation on Real Cloud Platform
+We also conduct experiments on a real cloud platform to
+evaluate the performance of the compared algorithms.
+The cloud platform under consideration comprises 18 diverse
+hosts, inclusive of 13 Sugon I620-G10, 1 Sugon I620-G15, 2
+Dell R720, and 2 Dell T630. The detailed speciﬁcations of
+these hosts are meticulously enumerated in Table VI. All hosts
+are seamlessly connected via an H3C S5100 switch, ensuring
+efﬁcient network communication. Each host is virtualized to
+multiple VMs. Four types of VM are created in this experi-
+ment. The speciﬁcations for each type of VM are methodically
+TABLE VI
+THE CONFIGURATION OF HOSTS
+TABLE VII
+THE CONFIGURATION OF VMS
+Fig. 11.
+The QTC results on real cloud platform.
+outlined in Table VII. We consider 160,000 face recognition
+collected by a community access control system in 10 days
+as experimental data. Each face recognition includes multiple
+steps such as image acquisition, face detection, pre-processing,
+feature extraction, feature matching, recognition decision and
+log update. Therefore, they are workﬂow instances. The deadline
+for each recognition is set to 2 seconds. During the experiment,
+we unplugged the network cable of one Sugon I620-G10 server
+to simulate resource failure. To clearly observe the overhead
+caused by resource failures, we also conducted corresponding
+experiments under condition with no resource failures.
+The results about QTC on real cloud platform is shown in
+Fig. 11, which indicates that all compared algorithms exhibited
+a signiﬁcant decrease in QTC values after the occurrence of
+resource failures. Fig. 11 also shows that ICFWS achieves the
+worst results if no server fails, while the other three algorithms
+yield similar outcomes and NEHFWPF achieves the best results.
+HFWPFandNEHFWPFyieldsimilarQTCresults,andbothout-
+perform the other comparative algorithms when one server fails.
+NOSF yields the worst results among all compared algorithms
+when one server fails. The reason lies in the fact that HFWPF
+and its variant, NEHFWPF, are tailored for cloud workﬂow
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:57:35 UTC from IEEE Xplore.  Restrictions apply. 
+56
+IEEE TRANSACTIONS ON SERVICES COMPUTING, VOL. 19, NO. 1, JANUARY/FEBRUARY 2026
+Fig. 12.
+The VRTR results on real cloud platform.
+scheduling with both resource failures and uncertain task execu-
+tion time. ICFWS and NOSF are designed for cloud workﬂow
+scheduling with resource failures and uncertain task execution
+time, respectively. However, ICFWS does not consider uncertain
+task execution time, while NOSF does not consider resource fail-
+ures. When comparing HFWPF and NEHFWPF, regardless of
+resource failures, NEHFWPF consistently achieves better QTC
+results than HFWPF. This is because all VMs in NEHFWPF
+keep in an active state, reducing the setup times of VMs and
+consequently improving their QTC values.
+The results regarding VRTR on a real cloud platform are
+illustrated in Fig. 12, which shows that HFWPF achieves the best
+VRTR results among all algorithms in the presence of resource
+failures, while NEHFWPF obtains the worst VRTR results.
+When no resource failures occurred, NOSF achieves the best
+VRTR results, whereas NEHFWPF still obtains the worst VRTR
+results, maintaining the same VRTR performance as in the case
+of resource failures. This is because both HFWPF and ICFWS
+adopt elastic resource provisioning and hybrid fault-tolerance
+mechanisms. However, ICFWS only considers resource failures
+without accounting for uncertain task execution time. Although
+NEHFWPF also employs a hybrid fault-tolerance strategy, its
+VMs remain perpetually active. When no resource failures oc-
+curred, NOSF does not reserve any resources for failures, while
+the other three algorithms reserve resources for task replicas
+during scheduling as replication is adopted in these algorithms,
+thereby improving their VRTR values.
+Upon simultaneously observing Figs. 11 and 12, it becomes
+evident that HFWPF outperforms both NOSF and ICWFS in
+terms of both QTR and VRTR. When comparing HFWPF with
+NEHFWPF, it is noted that NEHFWPF achieves a slight lead
+over HFWPF in QTR, but at the expense of a signiﬁcant VRTR
+penalty. Consequently, HFWPF exhibits superior comprehen-
+sive performance over NEHFWPF in actual cloud platforms.
+In this study, the VM fault detection time is ignored. This
+assumption is grounded in the efﬁciency of modern cloud mon-
+itoring systems (e.g., those based on heartbeats or fail-signals),
+which can typically detect a VM failure within a very short time
+interval, often on the order of seconds [38], [39]. Given that
+the VM boot time (Tboot = 15s) and the task execution times
+(typically in the order of minutes) are the dominant factors in the
+scheduling timeline, the inclusion of a second detection latency
+would have a negligible impact on the overall comparative
+results of the algorithms, which is the primary focus of this
+performance evaluation. However, we acknowledge that this
+simpliﬁcation might lead to a slight underestimation of the task
+resubmission overhead in real-world systems. The performance
+gap introduced by this assumption is expected to be consistent
+across all compared algorithms, as they all would be affected
+by a similar ﬁxed detection delay upon a fault. Therefore, while
+the absolute values of metrics like QTC and VRTR might be
+marginally more optimistic, the relative performance trends and
+the superiority of HFWPF demonstrated in our experiments are
+expected to hold robustly.
+VI. CONCLUSIONS AND FUTURE RESEARCH
+To deal with fault-tolerant cloud workﬂow scheduling with
+performance ﬂuctuated resources, we have proposed a workﬂow
+scheduling algorithm called HFWPF in this paper. It consists of
+four phases, including preprocessing, initial scheduling, online
+scheduling and online adjustment. The preprocessing divides
+the deadline of one accepted workﬂow instance into multi-
+ple subdeadlines for all tasks. The initial scheduling selects
+a fault-tolerant strategy from either replication or resubmis-
+sion for each task. It also selects served VM for each task.
+For tasks with resubmission, the online scheduling is used for
+online resubmission for faults. The online adjustment resizes
+the subdeadlines of some unexecuted tasks to make full use of
+time slots. Furthermore, HFWPF also adopts an elastic resource
+provisioning mechanism to satisfy the dynamic scheduling re-
+quirements. The experiments show that HFWPF can enhance
+the resource utilization and guarantee worﬂow execution time
+simultaneously in the context of fault tolerance and performance
+ﬂuctuation.
+The choice of fault-tolerant strategy from resubmission and
+replication for each task is only decided by the task slack time
+in this work. Expanding this research to include some other
+factors, such as cost or reliability, is a promising avenue for
+future work. Furthermore, VM migration and consolidation is
+an effective technique for reducing energy consumption and
+enhancing resource utilization. Extending this work to consider
+VMmigrationandconsolidationis apromisingavenuefor future
+work.
+REFERENCES
+[1] H. Chen, X. Zhu, G. Liu, and W. Pedrycz, “Uncertainty-aware online
+scheduling for real-time workﬂows in cloud service environment,” IEEE
+Trans. Serv. Comput., vol. 14, no. 4, pp. 1167–1178, Jul./Aug. 2021.
+[2] J. Liu et al., “Online multi-workﬂow scheduling under uncertain task
+execution time in IaaS clouds,” IEEE Trans. Cloud Comput., vol. 9, no. 3,
+pp. 1180–1194, Third Quarter 2021.
+[3] Y. Ding, G. Yao, and K. Hao, “Fault-tolerant elastic scheduling algorithm
+for workﬂow in cloud systems,” Inf. Sci., vol. 393, pp. 47–65, 2017.
+[4] G. Yao, Y. Ding, and K. Hao, “Using imbalance characteristic for fault-
+tolerant workﬂow scheduling in cloud systems,” IEEE Trans. Parallel
+Distrib. Syst., vol. 28, no. 12, pp. 3671–3683, Dec. 2017.
+[5] H. Chen, J. Zhu, Z. Zhang, M. Ma, and X. Shen, “Real-time workﬂows
+oriented online scheduling in uncertain cloud environment,” J. Supercom-
+puting, vol. 73, no. 11, pp. 4906–4922, 2017.
+[6] J. Schad, J. Dittrich, and J.-A. Quiané-Ruiz, “Runtime measurements in
+the cloud: Observing, analyzing, and reducing variance,” Proc. VLDB
+Endowment, vol. 3, no. 1/2, pp. 460–471, 2010.
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:57:35 UTC from IEEE Xplore.  Restrictions apply. 
+REN AND YAO: HYBRID FAULT-TOLERANT WORKFLOW SCHEDULING WITH PERFORMANCE FLUCTUATED CLOUD RESOURCES
+57
+[7] G. Yao, Q. Ren, X. Li, S. Zhao, and R. Ruiz, “A hybrid fault-
+tolerant
+scheduling
+for
+deadline-constrained
+tasks
+in
+cloud
+sys-
+tem,” IEEE Trans. Serv. Comput., vol. 15, no. 3, pp. 1371–1384,
+May/Jun. 2022.
+[8] K. Plankensteiner and R. Prodan, “Meeting soft deadlines in scientiﬁc
+workﬂows using resubmission impact,” IEEE Trans. Parallel Distrib. Syst.,
+vol. 23, no. 5, pp. 890–901, May 2012.
+[9] N. Yigitbasi, O. Sonmez, A. Iosup, and D. Epema, “Performance evalua-
+tion of overload control in multi-cluster grids,” in Proc. IEEE/ACM 12th
+Int. Conf. Grid Comput., 2011, pp. 173–180.
+[10] D. Cotroneo, R. Natella, and S. Rosiello, “Overload control for virtual
+network functions under CPU contention,” Future Gener. Comput. Syst.,
+vol. 99, pp. 164–176, 2019.
+[11] W. Qiu, Z. Zheng, X. Wang, X. Yang, and M. R. Lyu, “Reliability-based
+design optimization for cloud migration,” IEEE Trans. Serv. Comput.,
+vol. 7, no. 2, pp. 223–236, Second Quarter 2014.
+[12] B. Javadi, D. Kondo, J. Vincent, and D. P. Anderson, “Discovering sta-
+tistical models of availability in large distributed systems: An empirical
+study of SETI@home,” IEEE Trans. Parallel Distrib. Syst., vol. 22, no. 11,
+pp. 1896–1903, Nov. 2011.
+[13] R. Jhawar, V. Piuri, and M. D. Santambrogio, “Fault tolerance management
+in cloud computing: A system-level perspective,” IEEE Syst. J., vol. 7,
+no. 2, pp. 288–297, Jun. 2013.
+[14] B. Wu, K. Hao, X. Cai, and T. Wang, “An integrated algorithm for multi-
+agent fault-tolerant scheduling based on MOEA,” Future Gener. Comput.
+Syst., vol. 94, pp. 51–61, 2019.
+[15] G. Yao, Y. Ding, L. Ren, K. Hao, and L. Chen, “An immune system-
+inspired rescheduling algorithm for workﬂow in cloud systems,” Knowl.
+Based Syst., vol. 99, no. 99, pp. 39–50, 2016.
+[16] X. Zhu, J. Wang, H. Guo, D. Zhu, L. T. Yang, and L. Liu, “Fault-tolerant
+scheduling for real-time scientiﬁc workﬂows with elastic resource provi-
+sioning in virtualized clouds,” IEEE Trans. Parallel Distrib. Syst., vol. 27,
+no. 12, pp. 3501–3517, Dec. 2016.
+[17] Z. Li, H. Yu, G. Fan, and J. Zhang, “Cost-efﬁcient fault-tolerant workﬂow
+scheduling for deadline-constrained microservice-based applications in
+clouds,” IEEE Trans. Netw. Service Manag., vol. 20, no. 3, pp. 3220–3232,
+Sep. 2023.
+[18] T. Dong, F. Xue, H. Tang, and C. Xiao, “Deep reinforcement learning for
+fault-tolerant workﬂow scheduling in cloud environment,” Appl. Intell.,
+vol. 53, no. 9, pp. 9916–9932, 2023.
+[19] M. Farid, R. Latip, M. Hussin, and N. A. W. A. Hamid, “A fault-intrusion-
+tolerant system and deadline-aware algorithm for scheduling scientiﬁc
+workﬂow in the cloud,” PeerJ Comput. Sci., vol. 7, 2021, Art. no. e747.
+[20] A. R. Setlur, S. J. Nirmala, H. S. Singh, and S. Khoriya, “An efﬁcient
+fault tolerant workﬂow scheduling approach using replication heuristics
+and checkpointing in the cloud,” J. Parallel Distrib. Comput., vol. 136,
+pp. 14–28, 2020.
+[21] Z. Li, V. I. Chang, H. Hu, H. Hu, C. Li, and J. Ge, “Real-time and
+dynamic fault-tolerant scheduling for scientiﬁc workﬂows in clouds,” Inf.
+Sci., vol. 568, pp. 13–39, 2021.
+[22] Z. Cai, X. Li, R. Ruiz, and Q. Li, “A delay-based dynamic scheduling
+algorithm for bag-of-task workﬂows with stochastic task execution times
+in clouds,” Future Gener. Comput. Syst., vol. 71, pp. 57–72, 2017.
+[23] M. A. Rodriguez and R. Buyya, “Deadline based resource provision-
+ing and scheduling algorithm for scientiﬁc workﬂows on clouds,” IEEE
+Trans. Cloud Comput., vol. 2, no. 2, pp. 222–235, Second Quarter
+2014.
+[24] R. N. Calheiros and R. Buyya, “Meeting deadlines of scientiﬁc workﬂows
+in public clouds with tasks replication,” IEEE Trans. Parallel Distrib. Syst.,
+vol. 25, no. 7, pp. 1787–1796, Jul. 2014.
+[25] L. Xing, M. Zhang, H. Li, M. Gong, J. Yang, and K. Wang, “Local search
+driven periodic scheduling for workﬂows with random task runtime in
+clouds,” Comput. Ind. Eng., vol. 168, 2022, Art. no. 108033.
+[26] J. Xu, H. Yu, G. Fan, and J. Zhang, “Uncertainty-aware scheduling of
+real-time workﬂows under deadline constraints on multi-cloud systems,”
+Concurrency Computation: Pract. Experience, vol. 35, no. 5, 2023,
+Art. no. e7562.
+[27] K. Y. Rajput, X. Li, J. Zhang, and A. Lakhan, “A novel scheduling ap-
+proach for spark workﬂow tasks with deadline and uncertain performance
+in multi-cloud networks,” IEEE Trans. Cloud Comput., vol. 12, no. 4,
+pp. 1145–1157, Fourth Quarter 2024.
+[28] X. Chen, C. Lin, and B. Lin, “An intelligent workﬂow scheduling scheme
+for complex network robustness in fuzzy edge-cloud environments,” IEEE
+Trans. Netw. Sci. Eng., vol. 11, no. 1, pp. 1106–1123, Jan./Feb. 2024.
+[29] B. Lin, C. Lin, X. Chen, M. Lin, G. Huang, and Z. Xu, “Cost-driven
+scheduling for workﬂow decision making systems in fuzzy edge-cloud
+environments,” IEEE Trans. Autom. Sci. Eng., vol. 22, pp. 3756–3771,
+2025.
+[30] Y. Pan et al., “A novel approach to scheduling workﬂows upon cloud
+resources with ﬂuctuating performance,” Mobile Netw. Appl., vol. 25,
+pp. 690–700, 2020.
+[31] J. Bader, F. Lehmann, L. Thamsen, U. Leser, and O. Kao, “Lotaru:
+Locally predicting workﬂow task runtimes for resource management on
+heterogeneous infrastructures,” Future Gener. Comput. Syst., vol. 150,
+pp. 171–185, 2024.
+[32] Y. Yang, H. Shen, and H. Tian, “Scheduling workﬂow tasks with
+unknown task execution time by combining machine-learning and
+greedy-optimization,” IEEE Trans. Serv. Comput., vol. 17, no. 3,
+pp. 1181–1195, May/Jun. 2024.
+[33] S.Qin,D.Pi,Z.Shao,andY.Xu,“Adiscreteinterval-basedmulti-objective
+memetic algorithm for scheduling workﬂow with uncertainty in cloud
+environment,” IEEE Trans. Netw. Service Manag., vol. 20, no. 3, pp. 3020–
+3037, Sep. 2023.
+[34] L. Ye, Y. Xia, L. Yang, and C. Yan, “SHWS: Stochastic hybrid workﬂows
+dynamic scheduling in cloud container services,” IEEE Trans. Autom. Sci.
+Eng., vol. 19, no. 3, pp. 2620–2636, Jul. 2022.
+[35] A. Taghinezhad-Niar, S. Pashazadeh, and J. Taheri, “QoS-aware online
+scheduling of multiple workﬂows under task execution time uncertainty
+in clouds,” Cluster Comput., vol. 25, no. 6, pp. 3767–3784, 2022.
+[36] S. Abrishami, M. Naghibzadeh, and D. H. Epema, “Cost-driven scheduling
+ofgridworkﬂowsusingpartialcriticalpaths,”IEEETrans.ParallelDistrib.
+Syst., vol. 23, no. 8, pp. 1400–1414, Aug. 2012.
+[37] H. Topcuoglu, S. Hariri, and M.-Y. Wu, “Performance-effective and low-
+complexity task scheduling for heterogeneous computing,” IEEE Trans.
+Parallel Distrib. Syst., vol. 13, no. 3, pp. 260–274, Mar. 2002.
+[38] D.-M. Bui, T. Huynh-The, and S. Lee, “Early fault detection in IaaS cloud
+computing based on fuzzy logic and prediction technique,” J. Supercom-
+puting, vol. 74, pp. 5730–5745, 2018.
+[39] Y.-L. Lee, D. Liang, and W.-J. Wang, “Optimal online liveness fault detec-
+tion for multilayer cloud computing systems,” IEEE Trans. Dependable
+Secure Comput., vol. 19, no. 5, pp. 3464–3477, Sep./Oct. 2022.
+[40] W. Chen and E. Deelman, “WorkﬂowSim: A toolkit for simulating scien-
+tiﬁc workﬂows in distributed environments,” in Proc. IEEE 8th Int. Conf.
+E-Sci., 2012, pp. 1–8.
+[41] E. Deelman et al., “Pegasus, a workﬂow management system for science
+automation,” Future Gener. Comput. Syst., vol. 46, pp. 17–35, 2015.
+Qian Ren received the MS degree from the Hefei
+University of Technology, Hefei, China, in 2012. She
+is currently an associate professor with the College
+of Computer and Information Engineering, Chuzhou
+University, China. She is the author or co-author
+more than 10 academic papers, some of which have
+been published in international journals such as IEEE
+Transactions on Services Computing; IEEE ACCESS;
+Sensors. Her research interests include cloud resource
+scheduling and Internet of Things.
+Guangshun Yao received the PhD degree from
+Donghua University, China, in 2016. He is a profes-
+sor with the College of Computer and Information
+Engineering, Chuzhou University, China. He is the
+author or co-author more than 50 academic papers,
+some of which have been published in international
+journals such as IEEE Transactions on Parallel and
+Distributed Systems; IEEE Transactions on Services
+Computing; Information Sciences; Knowledge-Based
+Systems; Soft Computing. His research interests in-
+clude cloud computing and Internet of Things.
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:57:35 UTC from IEEE Xplore.  Restrictions apply. 

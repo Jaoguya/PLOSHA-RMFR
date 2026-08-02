@@ -1,0 +1,36 @@
+# Critical Flaws in Baseline Experiment Methodology
+
+This document outlines two severe methodological flaws discovered in the current `main` branch implementation of the PLOSHA-RMFR benchmark simulations. These issues invalidate the comparative claims made in Experiment 2 (Scheduling Efficiency) and would likely result in rejection during a rigorous academic peer review.
+
+## 1. The "Fake" FedDQN Baseline (Ref [22])
+
+The implementation of the FedDQN baseline in the `main` branch (`schemes/fed_dqn/src/fed_dqn_sim.cpp`) does not faithfully represent the Deep Q-Network algorithm described in Reference [22].
+
+### The Issue
+Instead of implementing a true Deep Q-Network, the `main` branch uses a simple, computationally cheap **tabular Q-Learning** algorithm (`QTable`). To mimic the computational cost of the baseline, a "dummy" neural network forward pass (`dqnForward`) is executed on every scheduling decision. The result of this pass is accumulated (to prevent compiler optimization) and then entirely discarded. 
+
+### Why This is a Red Flag
+- **Scientific Misconduct:** Simulating a heavy computational load using a dummy loop to artificially inflate a baseline's latency metric is considered "faking the baseline."
+- **Mathematical Inequivalence:** The simulation uses tabular Q-table averaging for its "Federated Synchronization." Averaging discrete Q-tables is mathematically completely different from Federated Averaging (FedAvg) over continuous neural network weights. It has different convergence rates and stability properties.
+- **The Solution:** The `lastest-fix` branch resolves this by introducing `DQNNetwork`, which completely replaces the Q-table with actual neural network weights, true forward-pass inference, and proper federated weight averaging. The `main` branch must adopt this true implementation.
+
+## 2. The Flawed Workload Imbalance Metric
+
+In Experiment 2, the workload imbalance ($I_W$) is remarkably identical across all four evaluated schemes (PLOSHA, FT-Workflow, FedDQN, FT-Serverless).
+
+### The Issue
+Across all simulation engines (`des_engine.cpp`, `ft_engine.cpp`, `fed_dqn_sim.cpp`), the workload imbalance is calculated based on the number of tasks that **arrive** at each fog node directly from the sensors:
+
+```cpp
+  // des_engine.cpp
+  if (f_id < config.num_fog_nodes && !fog_nodes[f_id].isFailed()) {
+    fog_nodes[f_id].submitReading(qr);
+    assigned_load[f_id]++; // <-- Metric measured here at ARRIVAL
+  }
+```
+
+Because all four schemes run the exact same dataset with the exact same sensor-to-fog static mapping (`sensors = fog_nodes * 100`), they all receive the exact same traffic burst at the exact same nodes. The metric calculates the statistical imbalance of the *raw input traffic* before the scheduling algorithm has any chance to redistribute or offload the work.
+
+### Why This is a Red Flag
+- **Invalidates Paper Claims:** The paper claims that PLOSHA's *"predictive load-sharing mechanism also avoids nodes approaching congestion, resulting in lower workload imbalance."* However, because the metric only measures initial arrivals, it is completely blind to any predictive load-sharing or offloading mechanisms.
+- **The Solution:** To accurately measure scheduling efficiency, the workload imbalance metric must evaluate the load (e.g., CPU utilization, or count of tasks executed) **after** the scheduling algorithm has offloaded and delegated tasks, not at the moment they enter the system queue.

@@ -1,0 +1,16 @@
+experiment: scheduling efficiency (paper Exp2)
+timestamp_utc: 2026-07-28T10:01:34Z
+git_commit: 431d719-dirty
+hostname: ip-172-31-17-252
+platform: Linux 7.0.0-1008-aws x86_64
+execution_mode: native
+epochs: 30
+failure_rate: 0 (default)
+dataset: /home/ubuntu/PLOSHA-RMFR/dataset/plosha_dataset.csv
+paillier_key_bits: 2048
+fog_sweep: 5-50 step 5
+sensors: fog_nodes * 100
+iterations_per_point: 30
+schedule: workload burst x1.5 from epoch 12; 20% node degradation from epoch 21
+heterogeneity_ratio: 5.0
+apply_scheduling_decision: true

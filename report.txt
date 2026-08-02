@@ -1,0 +1,411 @@
+PLOSHA-RMFR — Session Report
+Debugging run_exp1.sh / run_exp2.sh on AWS, statistics correction, and
+investigation of an aggregation-latency anomaly in Experiment 1.
+Last updated: 2026-07-22
+
+
+===============================================================================
+1. WHAT WENT WRONG, ORIGINALLY
+===============================================================================
+
+run_exp1.sh failed to run at all on the AWS instance (Ubuntu, x86-64).
+Root causes, found in order:
+
+  a) run_exp1.sh had CRLF line endings (edited/saved on Windows). Bash on
+     Linux read the trailing \r as part of each line, producing errors like:
+         run_exp1.sh: line 2: set: -: invalid option
+         run_exp1.sh: line 3: $'\r': command not found
+         cd: $'/path\r/schemes/...': No such file or directory
+
+  b) The committed binary schemes/plosha_rmfr/src/plosha_rmfr was a macOS
+     arm64 Mach-O executable (built on a Mac and checked into git). Linux
+     cannot execute a Mach-O image at all — this is a different binary
+     format, not a missing-library problem.
+
+  c) The AWS instance had no C++ toolchain and no OpenSSL headers installed
+     (needed by every scheme's Makefile: -lssl -lcrypto -pthread).
+
+  d) run_exp1.sh itself was untracked in git and briefly went missing from
+     the working directory entirely; it had to be reconstructed.
+
+  e) 14 compiled binaries across all 5 schemes were committed to git with no
+     .gitignore rule to prevent it (only *.o / *.exe were ignored, not
+     extensionless ELF/Mach-O executables).
+
+
+===============================================================================
+2. FIXES APPLIED
+===============================================================================
+
+Environment (AWS instance, currently 50.17.87.231 — NOTE: the public IP
+changes every time the instance is stopped/restarted unless an Elastic IP is
+attached):
+  - Installed build-essential (g++ 15.2.0, make 4.4.1) and libssl-dev
+    (OpenSSL 3.5.5).
+  - Confirmed actual OS is Ubuntu 26.04 LTS, x86-64, 8 vCPU, 16 GB free disk
+    (not 22.04 as originally assumed — doesn't matter functionally, both
+    satisfy the C++17 / OpenSSL 3.x requirements).
+
+Repository:
+  - Restored run_exp1.sh with LF line endings.
+  - Fixed CRLF in run_benchmark.sh.
+  - Added .gitattributes with `*.sh text eol=lf` so this cannot recur.
+  - Untracked all 14 committed compiled binaries (kept on disk, removed from
+    git index) and extended .gitignore to cover them going forward.
+  - Documented all of this in noerrorrun.md (system requirements /
+    known-failure-mode reference).
+
+New/changed scripts:
+  - run_exp_common.sh — shared preflight (toolchain/OpenSSL/dataset checks),
+    build, run, and verify logic used by both experiment runners. Written
+    once instead of duplicated per script.
+  - run_exp1.sh — rewritten to use run_exp_common.sh. Runs --experiment 8
+    (paper's "Experiment 1", aggregation ablation — the binary's own
+    experiment numbering is offset from the paper's).
+  - run_exp2.sh — new. Runs --experiment 9 (paper's "Experiment 2",
+    scheduling efficiency).
+  - Both scripts:
+      * work from any working directory (paths resolved from the script's
+        own location, not the caller's cwd)
+      * support EPOCHS=, FAILURE_RATE=, REBUILD=1, DEBUG=1 overrides
+      * force line-buffered binary output (stdbuf -oL) so multi-hour runs
+        show live progress in the log instead of nothing until completion
+      * log to logs/<script>_<timestamp>.log, with the log path printed
+        before the run starts (so it's known even if a stage fails)
+      * verify results.csv exists and has at least one data row before
+        reporting success
+
+
+===============================================================================
+3. STATISTICS FIX (mean/std estimator)
+===============================================================================
+
+Found: recent commits had changed Experiment 1's aggregation ablation
+(runExp8_AblationAggregation, des_engine.cpp) to summarise each sweep point
+by MEDIAN instead of mean, using a bespoke lambda written inline — a THIRD
+implementation of "summarise these epochs," alongside the one already used by
+every other experiment (MetricsCollector::computeAverages, mean + population
+std). Worse, the "std_*" columns in that code were left computing deviation
+about the MEDIAN while being labelled and reported as if they were standard
+deviations — they were not: they systematically overstate real dispersion,
+and two of the six metrics (recomputation_overhead, reused_microslot_count)
+were still centered on the MEAN in the same block, so the file was internally
+inconsistent.
+
+Fairness check: all four ablation variants (flat_epoch, fixed_slot,
+adaptive_slot, full_plosha) go through the identical code path and identical
+estimator, so switching estimators did not advantage any one variant over
+another — it was not a p-hacking risk, but it was still wrong.
+
+Fix applied:
+  - Removed the ~58-line inline median/variance block from des_engine.cpp.
+  - Extended the existing MetricsCollector::computeAverages() (used by every
+    other experiment) to also compute mean + population std for the six
+    ablation metrics.
+  - runExp8 now calls this one shared function, same as every other
+    experiment. Net effect: -74 lines in des_engine.cpp, one estimator used
+    everywhere, std_* columns are now genuine standard deviations.
+
+Verified: compiled clean under GCC 15 (0 errors), and cross-checked that the
+mean reported in results.csv for a given sweep point exactly matches the mean
+computed independently from that point's raw per-epoch dump (see section 5) —
+5.268775 in both, to 6 decimal places.
+
+
+===============================================================================
+4. --epochs AND --failure-rate WERE SILENTLY IGNORED
+===============================================================================
+
+Found while trying to run a 2-epoch smoke test of run_exp1.sh: passing
+EPOCHS=2 still ran the full 30 epochs. Cause: runExp8_AblationAggregation
+(and, it turned out, six other experiment runners — Exp1 through Exp6)
+overwrote exp_config.num_epochs and/or exp_config.failure_rate with hardcoded
+values AFTER copying the CLI-supplied config, silently discarding whatever
+the user passed on the command line.
+
+Fix:
+  - Added ExperimentConfig::failure_rate_set (set by the CLI parser only
+    when --failure-rate is actually supplied), so an experiment with its own
+    documented default can tell "caller asked for X" apart from "caller left
+    it unset" instead of unconditionally overwriting it.
+  - Added a named constant EXP1_ABLATION_FAILURE_RATE = 0.50 (config.hpp)
+    documenting why Experiment 1 defaults higher than the global 0.05 default
+    (recovery cost is what separates the ablation variants; too few epochs
+    trigger recovery at 5%) and flagging that it lies outside the 0.02-0.35
+    range swept by the failure-rate experiment.
+  - Removed six hardcoded `exp_config.num_epochs = 30/20` overwrites across
+    Exp1-Exp6 that were pure flag-killers (config.num_epochs already
+    defaults to 30/ABLATION_EPOCHS; the overwrite did nothing except break
+    --epochs).
+  - Exp7 (AFLTO ablation, fixed 20-entry failure/workload schedule arrays)
+    and Exp9 (scheduling efficiency, burst at epoch 12 / degradation at
+    epoch 21) intentionally KEEP a fixed epoch count — their internal
+    per-epoch schedules are indexed by epoch number and would silently
+    shift under a different count. This is documented in code comments and
+    in each experiment's provenance output (section 5), not silently
+    overridden.
+  - Every experiment now prints/records the parameters actually in effect,
+    so a log or output directory can be matched back to the CLI invocation
+    that produced it.
+
+Verified on the AWS box: --epochs 3 now produces exactly 3-epoch runs and
+3-row per-epoch dumps; --failure-rate 0.10 is honored and reported as
+"(--failure-rate)" rather than "(default)" in both the console output and
+run_metadata.txt.
+
+
+===============================================================================
+5. PROVENANCE AND AUDIT-TRAIL ADDITIONS
+===============================================================================
+
+Two gaps were identified and closed:
+
+  a) No result file recorded what produced it — not the code version, not
+     the host, not whether it was a native or Gramine-SGX run, not the
+     effective parameters. Combined with run_benchmark.sh's convention of
+     overwriting the plain experiment directories with SGX output after
+     backing up native results to a "_native" suffix, native and SGX numbers
+     could end up silently mixed with no artifact revealing which was which.
+
+     Fix: MetricsCollector::writeRunMetadata() writes a run_metadata.txt next
+     to every results.csv, recording: experiment name, UTC timestamp, git
+     commit (via a GIT_COMMIT define injected by the Makefile from
+     `git rev-parse`, with a "-dirty" suffix on uncommitted changes),
+     hostname, platform (uname), execution_mode (native vs gramine-sgx,
+     auto-detected via presence of /dev/attestation, which Gramine mounts
+     inside the enclave), effective epochs/failure_rate (and whether the
+     latter came from --failure-rate or a default), dataset path, and
+     Paillier key size. Wired into all four experiment output paths (the
+     generic sweep runner, and Exp7/Exp8/Exp9 individually, since each has
+     its own parameter-setting logic).
+
+  b) Per-epoch data was discarded (MetricsCollector::reset() between sweep
+     points) — only the aggregated mean/std survived, so neither a reviewer
+     nor we could audit whether a given mean/std was well-behaved.
+
+     Fix: MetricsCollector::writeEpochRecordsFile() dumps every recorded
+     epoch (all 16 metrics) as its own CSV row, written just before reset()
+     destroys the data. One file per sweep point, under
+     <experiment_dir>/epoch_records/. Cross-checked against a live run: the
+     mean of a dumped epoch file matched the corresponding results.csv value
+     exactly.
+
+Status: this code is implemented, synced to the AWS box, and compile-verified
+via a scratch binary (0 errors) and a functional test (produced correct
+run_metadata.txt and epoch_records/*.csv, confirmed against Experiment 4 as
+a test case). It was NOT yet compiled into the production plosha_rmfr binary
+used for the Experiment 1 run described in section 6 below — that run
+predates these additions and therefore has no run_metadata.txt or
+epoch_records/ of its own. It WAS picked up for the Experiment 2 run
+(section 7), since that build happened after this code was in place.
+
+
+===============================================================================
+6. EXPERIMENT 1 — COMPLETED RUN
+===============================================================================
+
+Full 30-epoch run (4 variants x 10 sensor counts = 40 sweep points) completed
+successfully on the AWS box: 4369 seconds (~73 minutes) wall time, verified
+40/40 data rows in schemes/plosha_rmfr/exp1_ablation_aggregation/results.csv.
+This run includes the section-3 statistics fix and the section-4 flag fix,
+but predates the section-5 provenance/epoch-dump code.
+
+A stale results.csv already existed in git at
+exp1_ablation_aggregation_native/ (timestamped before any of this session's
+work, consistent with the OLD median-based estimator and OLD failure_rate
+default of 0.10 — its loss_exposure_fraction of ~0.20 matches 0.10 failure
+rate, not the corrected 0.50). Because plots/generate_plots.py prefers the
+"_native" folder whenever it exists, plotting as-is would have silently used
+this stale pre-fix data instead of tonight's real run. It was moved aside to
+exp1_ablation_aggregation_native_stale_bak/ (not deleted) so the plot script
+correctly falls back to the fresh, non-"_native" results.
+
+Graph 1 (plots/output/graph1_ablation_aggregation.png) was regenerated from
+the corrected data. PLOSHA-RMFR (full_plosha) shows the lowest aggregation
+latency at nearly every sensor count, consistent with the expected result.
+
+
+===============================================================================
+7. GRAPH 1 ANOMALY — INVESTIGATION
+===============================================================================
+
+Observation: the plot shows a bump in aggregation_latency_ms at 1000 sensors
+and a smaller one at 4500 sensors, present in all four variants at the same
+x-value.
+
+Initial (WRONG) assessment: I first estimated this as being within one
+standard error assuming n=30 samples per point and dismissed it as noise.
+This was incorrect — the sweep actually pools 30 independent iterations x 30
+epochs = 900 samples per point (metrics_.reset() is called once per sweep
+point, not per iteration). At n=900, standard error is ~0.07 ms, and the
+observed bumps (0.13-0.37 ms) are 3-5x that — too large, at this sample size,
+to dismiss as pure sampling noise. This was corrected once the loop structure
+was re-examined.
+
+Given the bump is real (not attributable to sampling noise) but must not be
+"fixed" by curve-fitting, smoothing, or filtering data points — that would be
+indefensible result-shaping — three structural (non-random) hypotheses were
+tested by direct calculation, without rerunning the simulation:
+
+  HYPOTHESIS 1 — Failure-count quantization.
+  Failures are injected as num_failures = ceil(weibull_rate * num_fog),
+  capped at num_fog-1 (des_engine.cpp). ceil() rounds up, and the rounding
+  error is proportionally larger at small num_fog. A standalone C++ program
+  replaying just this conversion (200,000 trials per num_fog value) confirmed
+  a REAL bias: effective failure fraction ranges from +0.7 percentage points
+  (num_fog=5) to -5.4 points (num_fog=50) relative to the nominal 0.50 rate.
+  However, this bias is SMOOTH and MONOTONIC across the sweep — it does not
+  spike or dip specifically at num_fog=10 (1000 sensors) or num_fog=45
+  (4500 sensors). RULED OUT as the cause of the isolated bumps, though the
+  underlying bias is a real, independent defect worth fixing (see section 8).
+
+  HYPOTHESIS 2 — Dataset periodicity / sensor ID wraparound.
+  The dataset has exactly 100 unique real sensors (dataset_loader.cpp uses
+  original_sid = virtual_sid % 100 to cycle through them for larger sensor
+  counts). Every value in the sensor sweep (500, 1000, ..., 5000) is an exact
+  multiple of 100, so every real sensor profile is reused an equal, whole
+  number of times at every single sweep point with no partial-cycle
+  remainder. RULED OUT — this mechanism cannot produce a point-specific
+  effect under this sweep, by construction.
+
+  HYPOTHESIS 3 — Round-robin sensor-to-fog assignment clustering.
+  Sensor-to-fog assignment is deterministic round-robin (sid % num_fog_nodes,
+  dataset_loader.cpp). Since real per-sensor heterogeneity does exist (a
+  direct read of the CSV found mean vibration ranging 28.99-43.96 across the
+  100 real sensors, global std ~2.97), an uneven mapping of "harder" sensors
+  onto fewer fog nodes at specific num_fog values could plausibly inflate
+  system cost. A second standalone program computed, for each sweep point,
+  the standard deviation of per-fog-node average vibration (a direct
+  workload-imbalance measure) under the exact assignment used by the
+  simulation. Result: imbalance does NOT track the observed bumps —
+  4500 sensors (num_fog=45) has one of the LOWEST imbalance values in the
+  entire sweep (2.52%), while 5000 sensors (num_fog=50) has the HIGHEST
+  (6.09%) yet shows LOWER latency than 4500, the opposite of what this
+  hypothesis predicts. 1000 sensors' imbalance (3.42%) is tied exactly with
+  3000 sensors, which shows no bump at all. RULED OUT.
+
+CURRENT STATUS: three clean, cheaply-testable structural hypotheses have been
+disproven by direct calculation, with no simulation reruns required for any
+of them. The bump is real (confirmed via correct sample-size accounting) but
+its precise mechanism is not resolved. The most likely remaining explanation
+is an interaction with RMFR's recovery-mode threshold logic (tau_1/tau_2/
+tau_3, completeness flags) — e.g. certain num_fog values may push a
+disproportionate number of epochs across a threshold boundary into a more
+expensive recovery path. Confirming this would require runtime
+instrumentation (logging which RecoveryMode fires per epoch, per sweep
+point) and an actual rerun, which has NOT been done — this is a real cost,
+not a cheap static check like the three above.
+
+No further reruns or code changes for this investigation have been made
+pending a decision on whether to pursue the threshold-logic hypothesis or
+report the bump as-is (real, present in this random realization, with error
+bars communicating its magnitude honestly rather than hiding or smoothing it).
+
+
+===============================================================================
+8. OPEN ITEMS / RECOMMENDATIONS
+===============================================================================
+
+  1. Failure-rate reporting scope (unresolved, needs your decision): does the
+     paper report Experiment 1 and Experiment 2 from the NATIVE run or the
+     Gramine-SGX run? This determines whether AWS (no SGX support on any EC2
+     instance type or family) is sufficient, or an Azure DCsv2/DCsv3 /
+     SGX-capable bare-metal host is required. Also affects whether
+     failure_rate=0.50 (outside the 0.02-0.35 swept range elsewhere) needs an
+     explicit caveat in the write-up.
+
+  2. Section 3's estimator fix and section 4's flag fix are compiled and
+     verified; section 5's provenance/audit-trail code is compiled and
+     functionally verified but NOT yet baked into the binary that produced
+     the completed Experiment 1 results (section 6). Rebuilding and
+     re-running Experiment 1 to get run_metadata.txt / epoch_records for it
+     specifically was explicitly deferred (~74 minutes, user declined for
+     now) — the completed run's results.csv is valid and usable regardless.
+
+  3. The section-7 quantization bias (real, smooth, up to 5.4 percentage
+     points at high fog counts) has NOT been fixed in code yet — a candidate
+     fix (independent per-node Bernoulli(rate) trial instead of the
+     ceil()-rounded count) was proposed but not implemented, pending the
+     decision in item 1 of this section / whether to pursue the graph-1
+     anomaly further.
+
+  4. Add error bars (std / sqrt(n)) to graph1_ablation_aggregation.png and
+     any other plot using these results, regardless of what else is decided
+     — this was recommended independently of the anomaly investigation and
+     is a low-cost, high-value change to plots/generate_plots.py.
+
+  5. Experiment 2 (run_exp2.sh, --experiment 9, scheduling efficiency) was
+     launched on the AWS box and was progressing (past Paillier keygen, into
+     the epoch loop) when the instance was intentionally stopped, ending the
+     run before completion. On restart, expect a new public IP (unless an
+     Elastic IP is attached) and re-run run_exp2.sh from scratch — check the
+     newest file under logs/ first in case a partial results.csv is worth
+     comparing against.
+
+
+===============================================================================
+9. POST-MERGE FIXES (2026-07-22, after commits ff7433b/d8ee834/b949936)
+===============================================================================
+
+A merge left GIT CONFLICT MARKERS (<<<<<<< / ======= / >>>>>>>) COMMITTED
+inside run_exp1.sh and run_exp2.sh — both scripts were unrunnable (bash dies
+on line 2). Repo-wide sweep confirmed no other file was affected, and the
+session's C++ source fixes (sections 3-5) all survived the merge intact.
+
+Fixes applied locally (AWS box was off; compile verification still pending):
+
+  a) run_exp1.sh — resolved to the instrumented run_exp_common.sh version
+     (the other side was the superseded inline script). Syntax-checked,
+     LF endings, executable, smoke-tested through preflight.
+
+  b) run_exp2.sh — MERGED both sides rather than picking one: README's
+     Experiment Definitions table specifies Exp2 as a FOUR-scheme comparison
+     (PLOSHA + FedDQN + FT-Workflow + FT-Serverless), so the baseline stages
+     from the other side were kept. PLOSHA runs through run_exp_common.sh
+     (preflight/provenance/epoch-records/verify); the three baselines run
+     via a new extra_stages() hook in run_exp_common.sh so all output lands
+     in one log. Baseline invocations kept behaviorally identical (including
+     ft_serverless's --sensors 12600 --seed 12345); only path handling was
+     made cwd-independent. Added a baseline-verify step (each baseline
+     results.csv must exist with >=1 data row).
+
+  c) workload_imbalance metric fix (des_engine.cpp, runEpoch): the metric
+     read fog_nodes[f].currentQueueSize() AFTER aggregation had drained all
+     queues, so total load was always zero and the formula degenerated to
+     exactly 1/num_fog every epoch (std=0 across 900 samples — confirmed in
+     the stale exp2 CSV, a perfect 1/F hyperbola). It also made
+     convergence_time_epochs a pure arithmetic artifact (1/F < 0.1 iff
+     F > 10: rows read 18,18,0,0,0,0,0,0,0,0). Fixed by counting per-node
+     ASSIGNED readings at submission time (assigned_load[fog_id]++ next to
+     submitReading) and computing the same imbalance formula over that.
+     HONEST CONSEQUENCE: in Exp2 (failure_rate=0, no drops) the static
+     round-robin assignment is perfectly uniform, so PLOSHA's imbalance will
+     now read ~0.000 and convergence will be instant at every fog count.
+     That is the true behavior of a static assignment — whether the paper
+     should instead model dynamic re-routing is a DESIGN question, not
+     something to fake in the metric.
+
+  d) Failure-injection fix (des_engine.cpp, runEpoch): replaced
+     num_failures = ceil(weibull_rate * num_fog) — the count-quantized model
+     whose bias was measured at +0.7pp (5 nodes) to -5.4pp (50 nodes) — with
+     an independent Bernoulli(rate) trial per node, keeping the "at least
+     one node survives" invariant. Failure realizations change under the
+     same seed, so failure-dependent results (Exp1 ablation, Exp3 sweep)
+     must be regenerated before publication.
+
+  e) README constraints honored: plots/generate_plots.py NOT touched (README
+     forbids modification without explicit approval — the error-bar
+     recommendation from section 8 therefore remains pending approval);
+     README.md itself NOT modified (its own no-modify rule), although its
+     command examples contain a corrupted literal path
+     ("plosha_dataset.csv (Kaggle Smart Manufacturing Dataset with Jitter)")
+     that will not paste-execute — flagged here instead of edited.
+
+  STILL PENDING ON THE AWS BOX (off at time of writing):
+    - make clean && make to compile-verify fixes (c) and (d) — no local
+      compiler exists, so these are syntax-reviewed but NOT compiled yet.
+    - Move stale exp2_scheduling_efficiency_native/ aside (same trap that
+      nearly plotted stale Exp1 data; exp1's rename was done on the box
+      earlier and should be re-verified after restart).
+    - Rerun Experiment 1 (failure model changed by (d)) and Experiment 2
+      (first complete run, now 4 schemes).

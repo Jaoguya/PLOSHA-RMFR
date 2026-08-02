@@ -1,0 +1,13 @@
+experiment: aggregation ablation (paper Exp1)
+timestamp_utc: 2026-07-22T14:16:48Z
+git_commit: 431d719-dirty
+hostname: ip-172-31-17-252
+platform: Linux 7.0.0-1008-aws x86_64
+execution_mode: native
+epochs: 30
+failure_rate: 0.5 (default)
+dataset: /home/ubuntu/PLOSHA-RMFR/dataset/plosha_dataset.csv
+paillier_key_bits: 2048
+variants: flat_epoch,fixed_slot,adaptive_slot,full_plosha
+sensor_sweep: 500-5000 step 500
+fog_nodes: max(5, sensors/100)

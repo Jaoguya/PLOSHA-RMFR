@@ -1,0 +1,4 @@
+# Shell scripts must keep LF endings so they run on Linux (AWS) hosts
+*.sh text eol=lf
+# Compiled binaries are platform-specific; never normalise them
+*.pem binary

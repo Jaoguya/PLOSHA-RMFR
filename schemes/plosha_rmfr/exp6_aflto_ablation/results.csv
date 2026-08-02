@@ -1,0 +1,3 @@
+aflto_enabled,aggregation_latency_ms,recovery_latency_ms,aggregation_completeness,loss_exposure_fraction,communication_overhead_KB,system_availability,queue_utilization,recovery_frequency,energy_joules,scheduling_comm_kb,convergence_time_epochs
+0.000000,35.785726,0.041592,0.877404,0.037107,0.850000,0.974500,0.806950,1.700000,5.348562,0.000000,0.000000
+1.000000,35.713359,0.025183,0.967392,0.037207,1.664648,1.000000,0.806950,3.350000,5.335461,0.000000,0.000000

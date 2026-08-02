@@ -1,0 +1,54 @@
+# PLOSHA-RMFR Gramine Manifest Template (Gramine 1.9)
+# IMPORTANT: sgx.* keys MUST come BEFORE [[fs.mounts]] tables in TOML
+
+libos.entrypoint = "plosha_rmfr"
+loader.log_level = "{{ log_level }}"
+loader.insecure__use_cmdline_argv = true
+loader.env.LD_LIBRARY_PATH = "/lib:/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu"
+
+sys.enable_sigterm_injection = true
+
+sgx.enclave_size = "2G"
+sgx.max_threads = 16
+sgx.cpu_features.avx = "unspecified"
+sgx.cpu_features.avx2 = "unspecified"
+sgx.cpu_features.rdrand = "unspecified"
+sgx.cpu_features.aesni = "unspecified"
+sgx.trusted_files = [
+  "file:plosha_rmfr",
+  "file:{{ gramine.runtimedir() }}/",
+  "file:/usr/lib/x86_64-linux-gnu/libcrypto.so.3",
+  "file:/usr/lib/x86_64-linux-gnu/libssl.so.3",
+  "file:/usr/lib/x86_64-linux-gnu/libstdc++.so.6",
+  "file:/usr/lib/x86_64-linux-gnu/libgcc_s.so.1",
+  "file:/usr/lib/x86_64-linux-gnu/libz.so.1",
+  "file:/usr/lib/x86_64-linux-gnu/libzstd.so.1",
+]
+sgx.allowed_files = [
+  "file:{{ dataset_dir }}/",
+  "file:{{ output_dir }}/",
+]
+
+[[fs.mounts]]
+path = "/lib"
+uri = "file:{{ gramine.runtimedir() }}"
+
+[[fs.mounts]]
+path = "/lib/x86_64-linux-gnu"
+uri = "file:/usr/lib/x86_64-linux-gnu"
+
+[[fs.mounts]]
+path = "/usr/lib/x86_64-linux-gnu"
+uri = "file:/usr/lib/x86_64-linux-gnu"
+
+[[fs.mounts]]
+path = "/dataset"
+uri = "file:{{ dataset_dir }}"
+
+[[fs.mounts]]
+path = "/output"
+uri = "file:{{ output_dir }}"
+
+[[fs.mounts]]
+path = "/etc"
+uri = "file:/etc"

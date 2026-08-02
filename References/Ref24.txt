@@ -1,0 +1,1497 @@
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 20, NO. 3, MARCH 2024
+4305
+A Robust Privacy-Preserving Data Aggregation
+Scheme for Edge-Supported IIoT
+Shuai Shang
+, Student Member, IEEE, Xiong Li
+, Member, IEEE, Ke Gu
+, Associate Member, IEEE,
+Lei Li
+, Xiaosong Zhang
+, and Vijayakumar Pandi
+, Senior Member, IEEE
+Abstract—Edge-supported Industrial Internet of Things
+(IIoT) has received remarkable attention recently since edge
+computing can not only reduce bandwidth consumption
+but also decrease the response time of industrial systems.
+However, the sensed data in the industrial environment is
+considered private. Thus, the data cannot be directly aggre-
+gated at the server due to privacy leakage. Although several
+privacy-preserving-aggregated schemes have been pro-
+posed, their security goals are not strong enough. Besides,
+most schemes are inefﬁcient for resource-constrained de-
+vices. Aiming at solving the abovementioned problems,
+this article proposes a robust privacy-preserving data ag-
+gregation scheme for edge-supported IIoT. Speciﬁcally, the
+scheme adopts the Paillier cryptosystem to protect the
+privacy of users. Additionally, it utilizes ECDSA signature
+to support batch veriﬁcation of multiple signatures from
+different signers, which signiﬁcantly improves efﬁciency.
+Manuscript received 1 November 2021; revised 8 June 2023 and
+26 July 2023; accepted 6 September 2023. Date of publication 18
+October 2023; date of current version 23 February 2024. This work
+was supported in part by the National Natural Science Foundation of
+China under Grant 62332018, Grant 62072078, and Grant 62271128, in
+part by the Natural Science Foundation of Sichuan, China, under Grant
+2022NSFSC0550, and in part by the open project of the Key Laboratory
+of Data Protection and Intelligent Management, Ministry of Education,
+Sichuan University, under Grant SCUSAKFKT202303Z. Paper no. TII-
+21-4874. (Corresponding authors: Xiong Li; Vijayakumar Pandi.)
+Shuai Shang is with the Institute for Cyber Security, School of
+Computer Science and Engineering, University of Electronic Sci-
+ence and Technology of China, Chengdu 611731, China (e-mail:
+shshang180@gmail.com).
+Xiong Li is with the Institute for Cyber Security, School of Computer
+Science and Engineering, University of Electronic Science and Tech-
+nology of China, Chengdu 611731, China, also with the Key Labora-
+tory of Data Protection and Intelligent Management, Ministry of Ed-
+ucation, Sichuan University, Chengdu 610065, China, and also with
+the Shenzhen Institute for Advanced Study, University of Electronic
+Science and Technology of China, Shenzhen 518000, China (e-mail:
+lixiongzhq@163.com).
+Ke Gu is with the School of Computer & Communication Engineer-
+ing, Changsha University of Science & Technology, Changsha 410114,
+China (e-mail: gk4572@163.com).
+Lei Li is with the School of Mechano-Electronic Engineering, Xidian
+University, Xi’an 710071, China (e-mail: lilei02@xidian.edu.cn).
+Xiaosong Zhang is with the Institute for Cyber Security, School of
+Computer Science and Engineering, University of Electronic Science
+and Technology of China, Chengdu 611731, China, and also with the
+Shenzhen Institute for Advanced Study, University of Electronic Sci-
+ence and Technology of China, Shenzhen 518000, China (e-mail: john-
+sonzxs@uestc.edu.cn).
+Vijayakumar Pandi is with the Department of Computer Science and
+Engineering, University College of Engineering Tindivanam, Tindivanam
+604001, India (e-mail: vijibond2000@gmail.com).
+Color versions of one or more ﬁgures in this article are available at
+https://doi.org/10.1109/TII.2023.3315375.
+Digital Object Identiﬁer 10.1109/TII.2023.3315375
+Security analysis shows that the proposed scheme not
+only guarantees the integrity of the data and mutual au-
+thentication among entities but also realizes differential
+privacy protection. Extensive experiments are conducted
+to compare our scheme with the related work. The re-
+sults show that our method outperforms most of the com-
+pared schemes with respect to communication. Moreover,
+compared with the related work, our scheme reduces the
+computational cost by an average of 6.7%, 16.9%, and
+27.8% in sensor, edge server, and control center sides,
+respectively.
+Index Terms—Data aggregation, edge computing, Indus-
+trial Internet of Things (IIoT), privacy-preserving.
+I. INTRODUCTION
+T
+HE Internet of Things (IoT) [1] is a system of interrelated
+devices with certain sensing and computing capabilities,
+which can collect a large amount of sense data. For the sensed
+data, cloud computing [2] can provide storage and computation.
+However, due to the explosion of the data and the limitation
+of bandwidth, it is difﬁcult for centralized cloud computing
+to achieve real-time computing. Therefore, edge computing [3]
+was proposed to preprocess the sensed data at the edge, which
+evidently reduces bandwidth consumption and response time of
+the industrial systems.
+However, if the sensing data is processed in the edge server
+in plaintext, the private information of industrial companies
+will be leaked. For example, the production technology of an
+industrial company, such as production environment parameters
+and materials used, etc., is not only commercial secret but
+also the privacy of the company. Therefore, if the sensed data,
+such as temperature and pressure, is directly uploaded to edge
+servers without protection, an adversary can easily obtain the
+environment parameters by public channel or the compromised
+edge servers and further infer the production technology. As
+a result, the company may suffer huge losses. Therefore, the
+sensed data should be uploaded and processed in a privacy-
+preserving way. Fortunately, the data aggregation technique can
+process data in a privacy-preserving way, which not only saves
+the communication bandwidth but also protects the privacy of
+sensed data [4] in different environments.
+A. Related Work
+Recently, a lot of data aggregation schemes in smart grid [5],
+[6], [7], [8], [9], [10], [11] have been proposed for various
+1551-3203 © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:56:47 UTC from IEEE Xplore.  Restrictions apply. 
+4306
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 20, NO. 3, MARCH 2024
+functionalities and security features. In 2018, Abdallah et al. [5]
+proposed a lightweight lattice-based data aggregation scheme.
+This scheme migrates encryption and aggregation operations
+to smart household appliances (APs), which signiﬁcantly im-
+proves security features. In 2019, Saleem et al. [6] designed a
+fog-enabled scheme for a smart grid IoT network utilizing the
+Paillier homomorphic algorithm. The scheme not only supports
+the veriﬁcation of received messages but also reduces com-
+munication overhead. However, it is vulnerable to differential
+attacks. In order to resolve this issue, Li et al. [7] presented a
+novel secure and efﬁcient IoT data aggregation scheme, which
+adopts a replacement circuit based on oblivious transmission to
+prevent the server from knowing which device has obtained the
+generated secret and avoid the collusion between the client and
+the server. However, this scheme cannot resist denial-of-service
+(DoS) attacks. Chen et al. [8] proposed a multidimensional data
+aggregation scheme for the smart grid. It allows the server to
+aggregate multiple types of data, which is not only more in
+line with real-world applications but also can obtain more valu-
+able information. However, the scheme adopts bilinear pairing,
+which causes a huge computational overhead for smart meters.
+Liu et al. [9] presented a privacy-preserving aggregation scheme
+with function query for fog-computing-based smart grid, which
+provides users or the service provider with function queries on
+encrypted data. However, this scheme has a large communica-
+tion and computation overhead.
+In order to achieve efﬁcient data aggregation in the smart
+grid, Su et al. [10] designed a lightweight and communication-
+efﬁcient data aggregation scheme. In order to improve the
+computation efﬁciency, the authors adopted the widely-used
+masking-value-based method to protect the privacy and con-
+ﬁdentiality of the sensed data in the smart grid. Even though
+the scheme remarkably improves efﬁciency, the computational
+cost of the registration is still heavy and the data aggregation
+results cannot be veriﬁed. In 2022, Zhang et al. [11] proposed a
+veriﬁable privacy-preserving multitype data aggregation in the
+smart grid, they modiﬁed the Paillier cryptosystem to support
+multiple types of data aggregation and meanwhile altered the
+BLS signatures to achieve the veriﬁability of the aggregated
+results in the aggregator.
+Even though fog/edge computing is a promising solution to
+improve the service of mobile providers, the security of the
+data in the edge nodes remains an important concern [12]. The
+data generated by smart grid-related applications are very sensi-
+tive [13], and the privacy, conﬁdentiality, and integrity of these
+data should be strictly maintained. Due to the natural features of
+decentralization, immutability, and transparency, blockchain has
+been integrated with edge computing for IoT. The authors in [14]
+and [15] have proposed a high-level architecture by combining
+blockchain and edge computing for IoT, which can signiﬁcantly
+improve the security of various applications by introducing more
+security features, such as access authentication, data privacy
+preservation, attack detection, and trust management.
+Later,
+some
+researchers
+designed
+data
+aggregation
+schemes [16], [17], [18], [19] in smart grid with high-level
+security by combining blockchain and edge computing.
+In order to meet the requirement of the microgrid, Luo
+et al. [16] proposed a secure data aggregation scheme based
+on homomorphic encryption and the practical Byzantine fault
+tolerance (PBFT) consensus by leveraging blockchain. The
+scheme securely implements data aggregation and power
+dispatching in microgrids without any trusted third party.
+Similarly, in order to get rid of the centralized model
+with a trusted third party, Regueiro et al. [17] designed
+a privacy-enhanced data aggregation protocol based on
+blockchain and homomorphic encryption. In [18], Lu et al.
+devised an edge-blockchain-assisted data aggregation scheme
+that combines edge computing and blockchain to ensure
+data security and privacy protection at the edge layer. Then,
+Chen et al. [19] proposed a double-blockchain-assisted secure
+and anonymous data aggregation scheme. The scheme adopted
+a three-tier architecture that integrates fog computing and the
+blockchain, which achieves ﬁne-grained and two-level data
+aggregation. Moreover, robustness has been considered in
+various types of schemes [20], [21], [22] as a high level of
+security guarantee. Therefore, robustness should be considered
+more in data aggregation schemes to achieve more security
+features. The related work is summarized in Table I.
+Despite the existing data aggregation schemes, there are some
+limitations to be solved, which are as follows.
+1) Most schemes do not support the efﬁcient authentication
+of both data integrity and device identity through batch
+signature veriﬁcation.
+2) Most schemes cannot provide security guarantees of pri-
+vacy protection, data integrity, identity authentication,
+differential privacy, and resistance to replay attacks si-
+multaneously.
+3) The existing schemes suffer inefﬁcient communication
+and computation as the time-consuming bilinear pairing
+is often used.
+At the edge of the network, especially in edge-supported In-
+dustrial IoT (IIoT), terminal devices, e.g., smart meters, mainly
+face various security threats, e.g., data privacy leakage, and suf-
+fer inefﬁcient communication and computation where they usu-
+ally have poor resources. However, most existing work cannot
+achieve sufﬁciently efﬁcient communication and computation
+at the terminal device side at the base of meeting the necessary
+security features. To meet the scenario requirements, we always
+consider balancing the security guarantees and the efﬁciency of
+the devices. Regarding the security features, we have covered the
+most fundamental ones to make the scheme robust sufﬁciently,
+including privacy, integrity, authentication, resistance to replay
+attacks, and differential privacy. As for efﬁciency, we adopt
+a batch signature veriﬁcation algorithm for the elliptic curve
+digital signature algorithm (ECDSA) to speed up authentication.
+Meanwhile, we manage to avoid time-consuming operations,
+e.g., bilinear pairing, and perform precomputations as possible.
+As a result, the efﬁciency is signiﬁcantly improved.
+B. Our Contributions
+To address the above problems, we propose a robust privacy-
+preserving data aggregation scheme for edge-supported IIoT,
+called PPDA, in this work. The Paillier cryptosystem and elliptic
+curve digital signature algorithm are used for privacy protection
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:56:47 UTC from IEEE Xplore.  Restrictions apply. 
+SHANG et al.: ROBUST PRIVACY-PRESERVING DATA AGGREGATION SCHEME FOR EDGE-SUPPORTED IIOT
+4307
+TABLE I
+SUMMARY OF THE RELATED WORK
+and authentication, respectively. Moreover, edge computing is
+also adopted to reduce the computation and communication
+costs of the terminal device. Our contributions can be summa-
+rized as the following.
+1) Based on the Paillier cryptosystem and the modiﬁed
+ECDSA signature, we design a robust privacy-preserving
+data aggregation scheme for IIoT (PPDA). More
+importantly, the scheme enables efﬁcient authentication
+for data integrity and device identity via batch signature
+veriﬁcation.
+2) With respect to security features, we not only achieve
+privacy protection, data integrity, identity authentication,
+and resistance against replay attacks but also protect the
+sensed data from differential attacks, ensuring the high-
+security level of the sensed data.
+3) We efﬁciently implement the PPDA and compare the
+performance of PPDA with that of other related work.
+The experiment results show that PPDA is efﬁcient in
+terms of computation and communication.
+C. Organization of the Article
+The rest content of this article is organized as follows. Sec-
+tion II presents the preliminaries. The system model, security
+model, and design goals are illustrated in Section III. Section IV
+demonstrates the speciﬁc details of the proposed scheme PPDA.
+The correctness proof, security analysis, and security compari-
+sonaregiveninSectionV. SectionVI compares theperformance
+of our scheme with that of the other six related schemes. Finally,
+Section VII concludes this article.
+II. PRELIMINARIES
+In this section, we brieﬂy introduce the Paillier cryptosys-
+tem [23], differential privacy [24], and signature algorithm with
+batch veriﬁcation [25], which are used as the basis of the
+proposed scheme.
+A. Paillier Cryptosystem
+The Paillier cryptosystem [23] is widely used in privacy
+protection due to its homomorphic properties and resistance
+to chosen-plaintext attacks. It consists of three algorithms as
+follows.
+1) Key Generation: Given a security parameter k1, two
+large prime numbers p0 and q0 are chosen satisfying |q0|
+= |p0| = k1. Let N = p0 · q0 and λ = lcm(p0 −1, q0 −
+1). Then, L(x) is deﬁned as L(x) = x−1
+N , and μ =
+(L(gλ mod N 2))−1 is calculated, where g is a generator
+of Z∗
+N 2. The public key and private key pairs are (N, g)
+and (λ, μ), respectively.
+2) Encryption: The ciphertext of a message M ∈ZN can be
+calculated as C = gM · rN mod N 2, where r ∈Z∗
+N.
+3) Decryption: The underlying plaintext M of the ciphertext
+C can be recovered as M = L(Cλ mod N 2) · μ mod N.
+B. Differential Privacy
+The differential privacy technique [24] is ﬁrst proposed in
+2006. It can protect the privacy of users on neighboring datasets
+by adding appropriate noise.
+Deﬁnition 1. ϵ-differential privacy: A randomized algorithm
+K gives ϵ-difference privacy, in any dataset D1 and D2 that
+differs by at most one element, for any output t ∈Range(K),
+satisfying the following formula:
+Pr [K(D1) = t] ≤exp(ϵ) · Pr [K(D2) = t] .
+Deﬁnition 2. Global sensitivity: For a query function f :
+D →R, the global sensitivity of the query function f on the
+neighboring datasets D1 and D2 is
+△f = max |f(D1) −f(D2)| .
+The Laplace mechanism satisfying ϵ-differential privacy is
+denoted as Lap( △f
+ϵ ). Generally speaking, the smaller the value
+of the privacy budget ϵ is, the stronger the privacy protection
+provided by the mechanism is.
+Because of the above properties, a scheme satisfying differ-
+ential privacy can resist the differential attack.
+C. Signature Algorithm With Batch Veriﬁcation
+The signature algorithm with batch veriﬁcation supports the
+veriﬁcation of multiple signatures from different signers at
+once, which signiﬁcantly improves the efﬁciency of veriﬁcation
+compared with general signatures. In our scheme, we utilize
+the modiﬁed ECDSA [25] to support batch veriﬁcation for
+signatures from different signers. The details of the algorithm
+are described as follows.
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:56:47 UTC from IEEE Xplore.  Restrictions apply. 
+4308
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 20, NO. 3, MARCH 2024
+Fig. 1.
+System model of the proposed scheme.
+1) ((Qi, di)i∈[1,t], Gq(a, b)) ←ParaGen(k2, k3): A signer
+U ﬁrst selects a large prime number q of size k2 and
+random numbers a, b ∈Zq as the coefﬁcients of equation
+y2 = x3 + ax + b mod q to initialize the signature algo-
+rithm. Group Gq(a, b) is deﬁned in points of the equation
+with its order n of k3 bit. G = (xg, yg) is chosen as the
+generator of Gq(a, b) and O is the point at inﬁnity in
+Gq(a, b). Suppose there are t signers. Each signer Ui
+selects a random number di ∈[1, n −1] as its private key
+and further generates its public key Qi = diG.
+2) (Pi, si) ←Sig(di, mi): To sign a message mi, a signer
+Ui selects a random number ki ∈[1, n −1] to com-
+pute Pi = (xi, yi) = kiG and ri = xi mod n satisfying
+ri ̸= 0. Next, Ui computes the hash value of mi as
+ei =H(mi), where H(·) represents the SHA-256 algo-
+rithm. Afterward, si is computed as si = k−1
+i (ei + diri)
+mod n, satisfying si ̸= O. Finally, Ui outputs (mi, Pi, si)
+as the signature of the message m.
+3) (Accept/Reject) ←V er((mi, Pi, si), Qi)i∈[1,t]: Given
+signatures (mi, Pi, si), i ∈[1, t], the veriﬁer V
+ﬁrst
+checks if ri and si ∈[1, n −1], and then computes the
+hash value of message mi as ei = H(mi). Finally, V
+checks if the equation (t
+i=1 u1i)G + t
+i=1 u2iQi =
+t
+i=1 Pi holds, where u1i = eis−1
+i
+and u2i = ris−1
+i , i ∈
+[1, n −1]. If so, V accepts these signatures. Otherwise, V
+rejects these signatures since at least one of the signatures
+is invalid.
+III. SYSTEM AND SECURITY MODELS AND DESIGN GOALS
+In this section, we introduce the system model and security
+model of our scheme. Then, we illustrate the design goals of our
+scheme.
+A. System Model
+Fig. 1 shows the system structure of edge-supported IIoT, and
+there are four types of entities involved in this system, i.e., an
+administrator (AD), a cloud center (CC), edge servers (ES)s, and
+sensors (Ss).
+1) Administration (AD): The AD is the initiator and ﬁnal
+processor of the task in the entire system. It analyzes the
+collected sensed data on the cloud server and provides
+corresponding decisions.
+2) Cloud center (CC): The CC has sufﬁcient comput-
+ing and communication resources. After decrypting the
+aggregated ciphertext, CC processes the data according
+to the requirements of AD.
+3) Edge servers (ESs): ESs act as aggregators in IIoT, which
+bridge CC and sensors Ss. They aggregate data from Ss in
+asecuremanneranduploadtheaggregateddataciphertext
+to CC.
+4) Sensors (Ss): Ss usually have limited computing and
+communication resources. They collect data from the
+industrial environment and encrypt the sensed data. Then,
+they transmit the encrypted data to the corresponding ESs.
+B. Security Model
+In our model, AD is considered fully trusted. CC, ESs, and
+Ss are all assumed as semi-honest entities, i.e., each entity per-
+forms the protocol speciﬁcation but may attempt to infer sensors
+Ss’ private information. The security goals of this scheme are
+summarized as follows.
+1) Privacy protection: As the important privacy of an indus-
+trial company, the sensed data should not be obtained by
+other entities, i.e., the original data cannot be recovered
+by other entities except the sensors where the sensed data
+are generated.
+2) Identity authentication: In our model, all ESs and Ss are
+not fully trusted. Therefore, each of them should ﬁrst
+register in the system and, then, must be authenticated
+their legitimate identity by their communication partners.
+3) Data integrity: Messages can be easily modiﬁed by ma-
+licious adversaries. As a result, any modiﬁcations to the
+message should be checked by the message receiver to
+ensure data integrity.
+4) Differential privacy: The adversary may obtain the data
+of a single S through the differential attack during the
+transmission of the sensed data. Therefore, our scheme
+should resist the differential attack by adopting differen-
+tial privacy technology.
+5) Resistance to replay attacks: The adversary may attack
+the system or recover privacy by performing replay at-
+tacks. So, our scheme should be resistant to replay attacks.
+C. Design Goals
+In order to support privacy-preserving data aggregation, our
+PPDA should achieve the following goals.
+1) Security and privacy: The electricity consumption data
+is the privacy information of users and provides valuable
+power supply information for power dispatching. As a
+result, the proposed scheme should achieve the security
+goals mentioned earlier.
+2) Aggregation correctness: In the proposed scheme, ES
+should correctly aggregate the encrypted user data as well
+as the corresponding signatures. Finally, CC can get the
+correct aggregated results.
+3) High
+performance:
+The
+smart
+meters/sensors
+are
+typically
+computing
+and
+communication
+resource-
+constrained devices. Therefore, the proposed scheme
+should achieve efﬁcient communication and computation
+at a practical level, especially for smart meters/sensors.
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:56:47 UTC from IEEE Xplore.  Restrictions apply. 
+SHANG et al.: ROBUST PRIVACY-PRESERVING DATA AGGREGATION SCHEME FOR EDGE-SUPPORTED IIOT
+4309
+Fig. 2.
+Workﬂow of PPDA.
+TABLE II
+NOTATIONS
+IV. PROPOSED SCHEME
+In this section, we introduce our privacy-preserving data
+aggregation scheme for edge-supported IIoT in detail, and the
+workﬂow of PPDA is also shown in Fig. 2. Additionally, the
+notations used in the scheme and the corresponding meanings
+are listed in Table II.
+A. System Initialization
+According to the key generation algorithm of the Paillier cryp-
+tosystem in Section II-A, CC chooses two prime numbers p0, q0
+to generate the public key pair (N, g) and the corresponding
+private key pair (λ, μ), where |p0| = |q0| = k1. According to
+the modiﬁed ECDSA signature in Section II-C, CC chooses a
+prime number q and an elliptic curve Gq(a, b) deﬁned by y2 =
+x3 + ax + b mod q, where a, b ∈Zq and 4a3 + 27b2 ̸= 0. Next,
+a generator G of order n of the group Gq(a, b) is chosen. Then,
+CC selects a private key dCC ∈[1, n −1] and further com-
+putes the corresponding public key QCC = dCCG. After that, a
+prime number p and two hash functions: H1 : {0, 1}∗→Z∗
+p,
+H2 : {0, 1}∗→{0, 1}∗are selected, where |p| = k2. Finally,
+the parameters {N, g, H1, H2, q, a, b, G, n} are published to the
+whole system.
+B. Registration
+In this section, we describe the detailed registration process
+of ESs and Ss.
+1) Registration of ESs: To register to the system, ESi, i ∈
+[1, l], ﬁrst chooses a private key dESi ∈[1, n −1] and
+calculates the corresponding public key QESi = dESiG.
+Next,
+it
+generates
+a
+signature
+δRESi = (PRESi, SRESi) =
+sig(dESi, H1(IDESi∥TRESi)) based on its private key dESi,
+identity IDESi, and the current timestamp TRESi, where
+sig(·, ·) represents the signature algorithm with batch ver-
+iﬁcation in Section II-C. Then, ESi sends the message
+{IDESi, TRESi, δRESi, QESi} to CC. If the timestamp TRESi is
+fresh and the signature δRESi is valid, CC computes a signature
+δCCi = (PCCi, sCCi) = sig(dCC, H1(IDCC∥TRCCi)) with its
+private key dCC, identity information IDCC, and timestamp
+TRCCi. Finally, CC returns the message {IDCC, TRCCi, δCCi}
+to ESi. If the signature δCCi is valid and the timestamp TRCCi
+is fresh, ESi returns a conﬁrmation message to CC. On re-
+ceiving the conﬁrmation message from ESi, CC publishes the
+public key QESi of ESi. Until now, ESi has completed the
+registration.
+2) Registration of Ss: The registration of Ss is similar to
+that of ESs. In the registration, Sj, j ∈[1, t], chooses its private
+key dSj ∈[1, n −1], and calculates the corresponding pub-
+lic key QSj = dSjG. Then, Sj calculates a signature δRSj =
+(PRSj, sRSj) = sig(dSj, H1(IDSj∥TRSj)), where dSj, IDSj, and
+TRSj are its private key, identity information, and the current
+timestamp, respectively. Then, Sj sends the message {IDSj,
+TRSj, δRSj, QSj}toCC.Whenreceivingthemessage,CCchecks
+the timestamp TRSj and the signature δRSj. If the timestamp
+is fresh and the signature is valid, CC accepts the public
+key of Sj and calculates a signature δCCj = (PCCj, sCCj) =
+sig(dCC, H1(IDCC∥TRCCj)) with its private key dCC, identity
+IDCC, and timestamp TRCCj. Finally, CC returns the message
+{IDCC, TRCCj, δCCj} to Sj. If the timestamp TRCCj is legal and
+the signature δCCj is valid, Sj returns a conﬁrmation message
+to CC, and CC publishes the public key QSj of Sj to the
+corresponding ES. Now, Sj has completed the registration.
+C. Data Collection
+1) Data Request: AD ﬁrst sends data analysis task T
+to CC. Simultaneously, it also sends a data collection re-
+quest β to ESs and Ss through CC. We suppose that 1
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:56:47 UTC from IEEE Xplore.  Restrictions apply. 
+4310
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 20, NO. 3, MARCH 2024
+CC, l ESs, and t Ss are involved in the data collec-
+tion phase. CC calculates a signature δQCC = (PCC, sCC) =
+sig(dCC, H1(IDCC∥TQCC∥β)) according to its private key
+dCC, the collection request β, its identity IDCC and timestamp
+TQCC. Then, it broadcasts the message {IDCC, TQCC, δQCC, β}
+to all ESs. Each ESi accepts the request if both the
+timestamp TQCC and the signature δQCC are valid. After
+that, ESi generates a signature δQESi = (PQESi, sQESi) =
+sig(dESi, H1(β∥IDCC∥IDESi∥TQESi)) with its private key
+dESi, the collection request β, identity IDESi, and IDCC
+and timestamp TQESi. Finally, ESi broadcasts the mes-
+sage
+{IDCC, IDESi, TQESi, β, δQESi}
+to
+its
+subordinated
+Ss.
+If
+the
+timestamp
+TQESi
+and
+signature
+δQESi
+are
+both valid, Ss accept the message and begin to report
+data.
+2) Data Generation and reporting: For the collected data
+mij, Sij (the jth sensors of the ith edge server, i ∈
+{1, 2, . . . , l}, j ∈{1, 2, . . . , t}) chooses a random number
+Rij ∈Z∗
+N and encrypts the data as cij = gmij · RN
+ij mod
+N 2. Besides, Sij generates a signature δij = (Pij, sij) =
+sig(dSij, H1(IDSij∥cij∥Tij)) according to the signature algo-
+rithm with batch veriﬁcation described in Section II-C. Finally,
+Sij sends the message {IDSij, δij, Tij, cij} to ESi.
+3) Data Aggregation: Upon receiving t messages from its
+subordinated Ss, ESi accepts messages if timestamps are fresh
+and the algorithm Ver(·, ·), on the input of all signatures δij =
+(Pij, sij) and all the corresponding public keys Qij, outputs
+Accept, i.e., ESi veriﬁes all the signatures by checking if the
+equation holds, i.e., t
+j=1 H(cij)s−1
+ij G + t
+j=1 rijs−1
+ij QSij =
+t
+j=1 Pij, where rij is Pij’s x-coordinate modulo n. Then, ESi
+performs an aggregation operation on t ciphertexts contained in
+t messages and gets the aggregated ciphertext ci = g
+t
+j=1 mij ·
+(t
+j=1 Rij)N. In order to achieve differential privacy, ESi adds
+Laplace distributed noise ˆ
+mi into ci to generate a new aggregated
+ciphertext ˆci = ci · g ˆ
+mi = g
+n
+j=1 mij+ ˆ
+mi · (t
+j=1 Rij)N.
+After that, ESi further calculates the signature δESi =
+(Pi, si) = sig(dESi, H1(IDESi∥ˆci∥TESi)), where IDESi is the
+identity and TESi is the current timestamp. Finally, ESi sends
+{IDESi, δESi, TESi, ˆci} to CC.
+4) Data Decryption and Response: Upon receiving all mes-
+sages from l ESs, CC accepts messages if the timestamps
+are fresh and the algorithm Ver(·, ·), on the input of all sig-
+natures δESi = (Pi, si) and the corresponding public keys
+QESi, outputs Accept, i.e., CC checks if t
+j=1 H(ˆci)s−1
+i G +
+t
+j=1 ris−1
+i QESi = t
+j=1 Pi holds, where ri is Pi’s x-
+coordinate modulo n. If messages are valid, CC further re-
+covers the aggregated data ˆ
+M1, ˆ
+M2, . . . , ˆ
+Ml by decrypting the
+ciphertexts ˆc1, ˆc2, . . . , ˆcl with the private key (λ, μ) as ˆ
+Mi =
+L(ˆci
+λ mod N 2) · μ mod N = n
+j=1 mij + ˆ
+mi, i ∈[1, l].
+After obtaining the aggregated data, CC performs the data
+analysis task T receiving from AD by analyzing the aggregated
+data. Finally, CC gets the data analysis result R of task T and
+further sends R to AD.
+V. PROOF AND ANALYSIS
+In this section, we prove the correctness of key equations
+in our scheme, analyze the security features that our PPDA
+provides, and compare the security features of our PPDA and
+other related schemes. The details are elaborated as follows.
+A. Correctness Proof
+We mainly give the correctness analysis of batch veriﬁcation
+of signatures and the decryption process of our scheme.
+1) Batch
+Veriﬁcation
+on
+ES
+Side: For
+messages
+{IDSij, δij, Tij, cij}
+from
+Sij,
+j ∈[1, t],
+where
+δij =
+(Pij, sij) =
+sig(dSij, H1(IDSij∥cij∥Tij)),
+Pij =
+kijG =
+(xij, yij), sij = k−1
+ij (H(cij) + dSijrij) mod n and rij = xij
+mod n, ESi can verify
+⎛
+⎝
+t
+
+j=1
+H(cij)s−1
+ij
+⎞
+⎠G +
+t
+
+j=1
+rijs−1
+ij QSij
+=
+⎛
+⎝
+t
+
+j=1
+H(cij)s−1
+ij
+⎞
+⎠G +
+t
+
+j=1
+rijs−1
+ij dSijG
+=
+⎛
+⎝
+t
+
+j=1
+H(cij)s−1
+ij +
+t
+
+j=1
+rijs−1
+ij dSij
+⎞
+⎠G
+=
+t
+
+j=1
+	
+H(cij)s−1
+ij + rijs−1
+ij dSij
+
+G
+=
+t
+
+j=1
+s−1
+ij
+	
+H(cij) + rijdSij
+
+G
+=
+t
+
+j=1
+kijG =
+t
+
+j=1
+Pij.
+Therefore, the batch veriﬁcation of signatures on the ES side is
+correct.
+2) Batch Veriﬁcation on CC Side: For messages {IDESi,
+δESi, TESi, ˆci} from ESi, i ∈[1, l], where δESi = (Pi, si)=
+sig(dESi, H1(IDESi∥ˆci∥TESi)),
+Pi
+= kiG
+= (xi,
+yi),
+si= k−1
+i (H(ˆci)+dESiri) mod n and ri= xi mod n, CC
+can verify
+
+l
+
+i=1
+H(ˆci)s−1
+i
+
+G +
+t
+
+j=1
+ris−1
+i QESi
+=
+
+l
+
+i=1
+H(ˆci)s−1
+i
+
+G +
+t
+
+j=1
+ris−1
+i dESiG
+=
+⎛
+⎝
+l
+
+i=1
+H(ˆci)s−1
+ESi +
+t
+
+j=1
+ris−1
+i dESi
+⎞
+⎠G
+=
+l
+
+i=1
+	
+H(ˆci)s−1
+i
++ ris−1
+i dESi
+
+G
+=
+l
+
+i=1
+s−1
+i
+(H(ˆci) + ridESi) G
+=
+l
+
+i=1
+kiG =
+l
+
+i=1
+Pi.
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:56:47 UTC from IEEE Xplore.  Restrictions apply. 
+SHANG et al.: ROBUST PRIVACY-PRESERVING DATA AGGREGATION SCHEME FOR EDGE-SUPPORTED IIOT
+4311
+Therefore, the batch veriﬁcation of signatures on the CC side is
+correct.
+3) Correctness of Decryption: Accordingtotheworkin[23],
+assuming that x is a nonnegative integer, we can get (1 + N)x =
+1 + xN mod N 2. Therefore, we have
+ˆ
+Mi = L
+	
+ˆci
+λmod N 2
+· μ mod N
+= L
+	
+ˆci
+λmod N 2
+·
+	
+L
+	
+gλ mod N 2
+
+−1 mod N
+= L
+	
+ˆci
+λmod N 2
+L (gλ mod N 2) mod N
+=
+L
+
+g
+n
+j=1 mij+ ˆ
+mi · (t
+j=1 Rij)Nλ
+mod N 2
+
+L(gλ mod N 2)
+mod N
+=
+L
+
+gλ(n
+j=1 mij+ ˆ
+mi) · (t
+j=1 Rij)λN mod N 2
+L (gλ mod N 2)
+mod N
+=
+L
+
+gλ(
+n
+j=1 mij+ ˆ
+mi) · (t
+j=1 Rij)λN mod N 2
+L (gλ mod N 2)
+mod N
+=
+L
+
+gλ(
+n
+j=1 mij+ ˆ
+mi) mod N 2
+L (gλ mod N 2)
+mod N
+= 1 + λαN
+	n
+j=1mij + ˆ
+mi
+
+−1
+1 + λαN −1
+mod N
+= n
+j=1mij + ˆ
+mi.
+Therefore, the decryption process and the corresponding de-
+cryption results on the CC side are correct.
+B. Security Analysis
+1) Privacy Protection: In our scheme, Sij encrypts its sensed
+data mij to get the ciphertext cij and then sends the ciphertext to
+ESi. ESi cannot recover the original data mij from the Paillier
+ciphertext cij without the private key as the Paillier cryptosystem
+is secure against the chosen plaintext attack. Therefore, the
+privacy of Sij, i.e., the private data mij, can be protected on
+the ESi side.
+After all ESs perform the aggregation operation, CC collects
+all the aggregated ciphertexts and decrypts them to get the aggre-
+gated data ˆ
+mi = L(ciλ mod N 2)μ mod N = n
+j=1 mij + ˆ
+mi.
+Since the aggregation operation has been performed on the ESi
+side, CC can only obtain the data sum of all subordinated Ss of
+ESi. From the data sum, CC cannot recover the collected data
+mij of any single sensor Sij.
+Based on the above analysis, we can draw the conclusion that
+PPDA achieves privacy protection for Ss’ data.
+2) Authentication and Unforgeability: In the PPDA, authen-
+tication and unforgeability can be guaranteed by the digital
+signature technique.
+First, ESi and Sij submit {IDESi, TRESi, δRESi, QESi} and
+{IDSij, TRSij, δRSij, QSij} to CC for registration, respectively.
+Once their signatures δRESi and δRSij are veriﬁed success-
+fully, CC accepts their registration. In the data collection, upon
+receiving the request {IDCC, TQCC, δQCC, β} from CC, ESi
+can verify the signature δQCC by using the public key of CC.
+Since δQCC = sig(dCC, H1(IDCC∥TQCC∥β)), any adversary
+cannot forge a legal data collection request without knowing
+the private key dCC of CC. Similarly, Sij can also verify
+the validity of the message sender’s identity when it receives
+{IDCC, IDESi, TQESi, β, δQESi} from ESi.
+In the data generation and report, Sij encrypts the plaintext
+mij to cij, generates the signature δij by using the private
+key dSij with current timestamp Tij, and sends the message
+{IDSij, δij, Tij, cij} to Sij. When receiving messages, ESi can
+verify all the signatures of the received messages at once. The
+processes of the veriﬁcation can be seen in Section V-A1.
+Similarly, the validity of messages {IDESi, ESi, δESi, ˆci},
+i ∈[1, l], can be authenticated by the CC via batch veriﬁcation.
+3) Data Integrity: During the data generation and report
+phase, Sij sends the message {IDSij, δij, Tij, cij} to ESi,
+where δij =H1(dSij, IDSij∥cij∥Tij)). Without the private key
+dSij,theadversarycannotforgeavalidsignature.Asaresult,any
+modiﬁcation on cij can be checked by verifying the signature.
+Therefore, the integrity of data transmitted between the S side
+and the ES side can be guaranteed by the batch veriﬁcation
+mechanism of signatures.
+Similarly, in the data aggregation phase, the ESi sends
+the message {IDESi, δESi, TESi, ˆci} to CC, where δESi =
+sig(dESi, H1(IDESi∥ˆci∥TESi)). Any modiﬁcation to the mes-
+sage can be checked by verifying the signature. Therefore,
+the integrity of data transmitted between ESs and CC can be
+guaranteed by the batch veriﬁcation mechanism of signatures.
+4) Differential Privacy: To resist differential attacks, the pro-
+posed scheme implements differential-privacy protection for
+sensed data. In our scheme, ESi adds the Laplace noise ˆ
+mi
+to the aggregated ciphertext. According to the
+[29, Axiom
+2.1.1] (this axiom has been observed to hold in differential
+privacy), the dataset satisﬁes the ϵ-differential privacy after
+encryption. CC ﬁnally gets the sum of all Ss’ data, i.e., ˆ
+Mi =
+n
+j=1 mij + ˆ
+mi. According to the deﬁnition of differential pri-
+vacy,therandomizedalgorithmK : K(D) = f(D) + Lap( △f
+ϵ )
+provides ϵ differential privacy, where D denotes a dataset.
+The noise ˆ
+mi satisﬁes the Lap( △f
+ϵ ) Laplace distribution. So
+the decrypted ciphertext
+ˆ
+Mi meets the ϵ-differential privacy
+under the randomized algorithm K. For the total usage data
+M = l
+i=1 Mi = l
+i=1
+n
+j=1 mij + l
+i=1 ˆ
+mi, the noise ˆ
+mi
+is drawn independently from the Laplace distribution. Since
+the variance is 2(△(f)/ϵ)2, we can know that the variance
+of l
+i=1 ˆ
+mi is 2l(△(f)/ϵ)2. We say that the sensitivity of
+l
+i=1 ˆ
+mi is △f ′, where △f ′ = l△f, and the privacy budget
+is ϵ′. From the equation 2l(△(f)/ϵ)2 = 2(△(f)′/ϵ′)2, we can
+know that ϵ′ =
+√
+lϵ, and the total usage data M = l
+i=1 Mi =
+l
+i=1
+n
+j=1 mij + l
+i=1 ˆ
+mi satisﬁes (
+√
+lϵ) differential pri-
+vacy. The above analysis can be seen in [30].
+5) Resistance to Replay Attacks: To resist replay attacks,
+PPDA adopts timestamps to ensure the freshness of messages.
+In the registration phase, ESs and Ss apply for registration
+by sending messages containing timestamps. According to
+the timestamp, CC can distinguish if the received registration
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:56:47 UTC from IEEE Xplore.  Restrictions apply. 
+4312
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 20, NO. 3, MARCH 2024
+TABLE III
+SECURITY COMPARISON
+messages are legal requests or replay requests. Besides, all ESs
+can check if the timestamp in the broadcast message is fresh to
+resist replay attacks during the data collection. Similarly, Ss can
+also resist replay attacks. In the data generation and reporting
+phase, Sij inserts the timestamp Tij into the signature δij and the
+message to prevent the report data from replay attacks. Finally,
+all ESs check the freshness of the timestamps in the t received
+messages to verify that messages are legitimate instead of the
+replay messages from attackers. In conclusion, our scheme can
+resist replay attacks.
+C. Security Comparison
+Based on the above security analysis, PPDA achieves all ﬁve
+security features, i.e., privacy protection, identity authentication,
+data integrity, differential privacy, and resistance against replay
+attacks. The security features of our PPDA and the related
+schemes are summarized and compared in Table III.
+In [8], the Paillier cryptosystem and bilinear pairing are used
+to guarantee the privacy of the individual user and achieve
+the authentication of messages, respectively. Data integrity and
+resistance to replay attacks are ensured by using the hash func-
+tion and timestamp, respectively. However, it cannot achieve
+differential privacy. The scheme [9] achieves similar security
+features while using different methods. Speciﬁcally, the scheme
+employs the double trapdoor decryption cryptosystem to achieve
+the privacy protection of the user and adopts bilinear maps to
+support authentication and data integrity veriﬁcation. Regarding
+replay attacks, the authors also add the time period information
+into messages to ensure the message’s freshness, In [26], Shen
+et al. use the Paillier cryptosystem to protect the privacy of users.
+The bilinear pairing and hash function can ensure authentication
+and data integrity. The uploaded messages contain timestamps,
+which make the scheme resistant to replay attacks. However, this
+scheme also cannot achieve differential privacy. In [27], Vahedi
+et al. adopt an elliptic-curve-based ElGamal cryptosystem to
+encrypt the message to realize the protection of user privacy.
+Based on the idea of a digital signature, the scheme adopts
+bilinear pairing to realize the authentication between communi-
+cation entities. Data integrity and resistance to replay attacks are
+achieved by using hash functions and timestamps, respectively.
+However, the scheme still cannot achieve differential privacy.
+In [28], the privacy of a user can be protected by the Paillier cryp-
+tosystem. Furthermore, the transmitted messages always contain
+the timeslot information to resist replay attacks. However, the
+identity cannot be veriﬁed by the receiver and the differential
+attacks cannot be prevented. In [11], the Paillier cryptosystem
+is also used to protect the privacy of a single user. Additionally,
+the authors utilize a modiﬁed BLS signature to achieve data in-
+tegrity and identity authentication. Moreover, they also insert the
+timestamp into a message transmitted between communication
+entities to ensure the freshness of the message, so as to resist the
+replay attacks.
+VI. PERFORMANCE EVALUATION
+To evaluate our scheme, we illustrate the comparison of our
+scheme with six other related schemes [8], [9], [11], [26], [27],
+[28] in terms of communication overhead and computational
+cost. For the sake of simplicity, we denote our scheme as PPDA
+in the following description. Besides, in order to better describe
+the communication and computational cost of the compared
+schemes, we use ESi and CC to replace the edge devices and
+computing center in schemes [8], [9], [11], [26], [27], [28],
+respectively.
+A. Experimental Setting
+In the experiments, we set the number of CC, ES, and S are
+1, 2, and 20, respectively. Moreover, the number of subordinate
+Ss for each ES is set to 10. We compare some operations
+including Encryption (Enc), Decryption (Dec), Signature (Sig),
+Single veriﬁcation (S-Verif), Batch veriﬁcation (B-Verif), Bilin-
+ear mapping (Bili-map), and Aggregation (Agg).
+For fair comparisons between PPDA and six other related
+schemes, the detailed parameters are set fairly as follows. The
+length of big prime numbers p0, q0 in the Paillier cryptosystem
+are both set to 1024 bits, i.e., k1 = 1024. The length of an
+element in Gq(a, b) of the ECDSA signature is assumed to
+be 256 bits, i.e., k2 = 256. With respect to the identity and
+timestamp, the length is set to 2 bytes and 4 bytes, respectively.
+Therefore, the ciphertext size of Paillier and the hash function
+H1 are 256 and 32 bytes, respectively. Additionally, the length
+of feedback from CC to ESs and Ss in [9] is set to 4 bytes. In
+bilinear mapping, the length of an element in the cycle group is
+128 bytes.
+Based on the above setting, we conduct extensive experiments
+on a laptop with Windows 10 Professional operating system, a
+2.80 GHz Intel(R) Core(TM) i7-7700 CPU, and 16-GB RAM.
+The time cost for the bilinear pairing operation is simulated
+based on Java with the JPBC library.
+B. Communication Overhead Comparison
+In this part, we compare the communication overhead of
+PPDA with other related schemes [8], [9], [11], [26], [27], [28].
+1) Communication Overhead Between Sij and ESi: In
+PPDA,
+Sij
+receives
+the
+message
+{IDCC, IDESi, TQESi,
+β, δQESi} from ESi in the data collection request and
+sends the message {IDSij, δij, Tij, cij} to ESi during the
+data generation and report. Therefore, the communication
+overhead
+between
+Sij
+and
+ESi
+is
+totally
+644
+bytes.
+While in [9], Ui sends (t, Ui, Ci,t, δi,t) to the fog Fk
+and receives (t, fbk, δfb
+k,t). As a result, the communication
+overhead
+is
+1294
+bytes
+in
+total.
+In
+[8],
+[11],
+[26],
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:56:47 UTC from IEEE Xplore.  Restrictions apply. 
+SHANG et al.: ROBUST PRIVACY-PRESERVING DATA AGGREGATION SCHEME FOR EDGE-SUPPORTED IIOT
+4313
+TABLE IV
+COMMUNICATION OVERHEAD COMPARISON (BYTES)
+Fig. 3.
+Communication overhead between S and ES.
+[27], and [28], Sij
+sends {ci, Vi, ti, idi}, {CTi, σi, T},
+{Cik∥IDRAGWi∥IDUserik∥T∥δik},
+{Rit∥Sit∥t∥IDUi∥δit},
+and
+{Ci||M gw
+i
+||M cs
+i ||Ni||Xi||IDi}
+to
+ESi,
+respectively.
+Therefore, the corresponding communication overhead between
+Sij and ESi of these schemes are 582, 580, 650, 390, and 674
+bytes, respectively.
+The comparison of communication overhead between ESi
+and Sij is illustrated in Table IV and Fig. 3. Based on the ﬁgure,
+the communication cost in our scheme is evidently lower than
+that in [9], [26], and [28] and is close to that in [8] and [11]
+but is higher than that in [27]. Speciﬁcally, our work can resist
+differential attacks, while [8] cannot achieve this.
+2) Communication Overhead Between ESi and CC: In our
+scheme, ESi receives the message {IDCC, TQCC, δQCC, β}
+from CC and sends {IDESi, δESi, TESi, ˆci} to CC. So the
+communication cost between ESi and CC is 604 bytes.
+While in [9], fog Fk sends messages (t, Fk, AD, ˆ
+ck,t, ˆ
+δk,t)
+and (△, t, Fk, ˆ
+ck,t, ˆ
+δk,t). Simultaneously, it also receives
+the message (t, fbk, δfb
+k,t). Therefore, the communication
+overhead
+is
+1704
+bytes.
+Besides,
+in
+[8],
+[11],
+[26],
+[27], and [28], Sij
+sends {ci, Vi, ti, idi}, {CT, σ, ξ, T},
+{SAMDD∥IDCC∥IDDGW ∥n1∥n2∥· · · ∥nm∥T∥δ},
+{Rt∥
+St∥t∥IDAGi∥δAGj,t},
+and
+{CT ||M CS
+T ||XT ||NT }
+to
+CC.
+Therefore, the communication overhead between ESi and
+CC of these schemes are 582, 644, 671, 390, and 704 bytes,
+respectively.
+Table IV and Fig. 4 demonstrate the comparison of communi-
+cation between ESi and CC. It is clear that our scheme PPDA is
+more efﬁcient than that in [9], [11], [26], and [28] and is close to
+that in [8] while the communication overhead of PPDA is higher
+than that in [27]. The main reason is that our PPDA allows the
+sensors to upload the data reports only when receiving the data
+upload request instead of uploading data reports automatically.
+To ensure the security of the data upload request, more messages
+should be sent, i.e. the signature of the request. Even though
+heavier communication overhead is caused in this way, it is more
+ﬂexible and energy efﬁcient.
+Fig. 4.
+Communication overhead between ES and CC.
+Fig. 5.
+Communication overhead in total.
+TABLE V
+TIME COST ON Sij(MS)
+3) Total Communication: The total communication overhead
+between S and ES, and between ES and CC is compared in
+Table IV and Fig. 5. From the ﬁgure, we can see that PPDA
+outperforms schemes [9], [26], [28] and is almost similarly
+efﬁcient to schemes [8], [11] regarding the communication
+overhead but is less efﬁcient than [8]. However, Chen et al. [8]
+achieves fewer security features than our PPDA and suffer more
+computational costs.
+C. Computational Cost
+In this part, we compare PPDA with other related schemes [8],
+[9], [11], [26], [27], [28] on the computational cost by conduct-
+ing extensive experiments.
+1) Time Cost at Sij: We summarize the computation cost
+of a single Sij of PPDA and schemes [8], [9], [11], [26], [27],
+[28] in Table V. For better observation, we also show the time
+cost of Sij in Fig. 6. From the table and the ﬁgure, we can
+see that the computational cost of Sij in PPDA is 6.7% less
+than that of related schemes on average. There are different
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:56:47 UTC from IEEE Xplore.  Restrictions apply. 
+4314
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 20, NO. 3, MARCH 2024
+Fig. 6.
+Computational cost at Sij.
+TABLE VI
+TIME COST ON ESi(MS)
+reasons in different related schemes for this result. In [8], a
+sensor Sij similarly performs the encryption and signature.
+However, it needs to calculate multiple time-consuming large-
+number multiplications and bilinear mappings to encrypt multi-
+pletypes of dataandconstruct signatures, respectively. Although
+Liu et al. [9] avoids the use of bilinear pairing in Sij, it
+adopts a more complex double trapdoor decryption system,
+which causes more computation resources than the Paillier
+cryptosystem. In [26], Sij similarly performs the encryption and
+signature, but it additionally needs to pack the multitype data
+before encryption. In [11], Sij also needs to pack the multitype
+data into a plaintext like [26], which enlarges the plaintext to
+be encrypted and brings additional overhead. Moreover, the
+signature process involves two power exponential operations,
+which are the main part of the computation cost of Sij. In [27],
+the sensed data need to be mapped into a point of an elliptic
+curve before being encrypted with the ElGamal cryptosystem.
+However, the mapping takes more computational time as it is
+realized by point multiplication deﬁned on an elliptic curve.
+In [28], the constructions of the authentication information and
+fault tolerance guarantee are really time-consuming.
+2) Time Cost at ESi: We sum up the computational cost
+of ESi in PPDA and other related schemes [8], [9], [11],
+[26], [27], [28] in Table VI. From this, we can ﬁnd that the
+computationofESi inPPDAismoreefﬁcientthanalltherelated
+work. Speciﬁcally, the computational cost has been reduced
+by 16.9% on average. It is due to the fact that in PPDA, we
+adopt a batch signature veriﬁcation algorithm to speed up the
+veriﬁcation process while the most time-consuming operations
+are multiplications on large integers, i.e., the aggregation of the
+Paillier ciphertexts. Therefore, few time-consuming operations
+are performed in PPDA. However, in other schemes e.g., [8],
+[9], [11], [26], [27], some operations with heavy computation
+are needed to aggregate the signatures, such as multiple power
+Fig. 7.
+Computational cost at ESi.
+TABLE VII
+TIME COST ON CC(MS)
+Fig. 8.
+Computational cost at CC.
+exponential and bilinear mapping operations. For a more intu-
+itive comparison, we describe the time cost of ESi in Fig. 7.
+3) Time Cost at CC: We generalize the computational cost
+of CC in PPDA and schemes [8], [9], [11], [26], [27], [28]
+in Table VII. According to the table, our PPDA has improved
+26.8% of the computational cost of CC compared to that in [8],
+[9], [11], [26], and [27]. Although CC in all the schemes per-
+forms both signature veriﬁcation and decrypts the aggregated
+ciphertexts, CC in PPDA conducts batch signature veriﬁcation
+not by bilinear pairing operations but only by point addition
+and three times point multiplications while in other schemes,
+CC needs to perform more time-consuming bilinear pairing
+or point multiplication operations for signature veriﬁcation.
+The corresponding computational cost in [28] is a little better
+than that of PPDA. That is because, in PPDA, we strengthen
+the security features at the cost of increasing the computa-
+tional cost, i.e., differential privacy and identity authentication.
+As a result, our scheme achieves stronger security than that
+in [28]. For better observation, we describe the time cost in CC
+in Fig. 8.
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:56:47 UTC from IEEE Xplore.  Restrictions apply. 
+SHANG et al.: ROBUST PRIVACY-PRESERVING DATA AGGREGATION SCHEME FOR EDGE-SUPPORTED IIOT
+4315
+VII. CONCLUSION AND FUTURE WORK
+In this article, we propose an efﬁcient and robust privacy-
+preserving data aggregation scheme for edge-supported IIoT,
+namely PPDA. In particular, PPDA adopts the Paillier cryp-
+tosystem to protect the data privacy of Ss and utilizes differential
+privacy to resist differential attacks. Moreover, PPDA not only
+ensures the message integrity and identity authentication of Ss,
+ESs, and CC by employing the modiﬁed ECDSA signature but
+also enables ESs and CC to efﬁciently verify the signatures via
+the batch signature veriﬁcation algorithm. Finally, we analyze
+the security features of our PPDA, and the result demonstrates
+thatPPDAmeetstheﬁvesecurityrequirementsdescribedbefore.
+Extensive experiments are conducted to evaluate PPDA, and the
+results illustrate that PPDA is efﬁcient in both communication
+and computation. Speciﬁcally, compared to the related schemes,
+PPDA has improved 6.7%, 16.9%, and 26.8% of the computa-
+tion efﬁciency on the S, ES, and CC sides on average, respec-
+tively. Terminal devices in the smart grid usually have very lim-
+ited computational and communication resources. However, the
+existing work is far from sufﬁciently lightweight for practicality.
+In future work, we will further study lightweight data aggre-
+gation schemes to reduce the computation and communication
+overhead on both the ES and the S sides for more practicality.
+REFERENCES
+[1] L. Atzori, A. Iera, and G. Morabito, “The Internet of Things: A survey,”
+Comput. Netw., vol. 54, no. 15, pp. 2787–2805, 2010.
+[2] M. Armbrust, A. Fox, R. Grifﬁth, A. D. Joseph, and M. Zaharia, “A view
+of cloud computing,” Commun. ACM, vol. 53, no. 4, pp. 50–58, 2010.
+[3] W. Shi, J. Cao, Q. Zhang, Y. Li, and L. Xu, “Edge computing: Vision and
+challenges,” IEEE Internet Things J., vol. 3, no. 5, pp. 637–646, Oct. 2016.
+[4] P. D. Bliese, “Within-group agreement, non-independence, and reliabil-
+ity: Implications for data aggregation and analysis,” Multilevel theory,
+research, and methods in organizations: Foundations, extensions, and new
+directions, pp. 349–381, 2000.
+[5] A. Abdallah and X. S. Shen, “A lightweight lattice-based homomorphic
+privacy-preserving data aggregation scheme for smart grid,” IEEE Trans.
+Smart Grid, vol. 9, no. 1, pp. 396–405, Jan. 2018.
+[6] A. Saleem et al., “FESDA: Fog-enabled secure data aggregation in smart
+grid IoT network,” IEEE Internet Things J., vol. 7, no. 7, pp. 6132–6142,
+Jul. 2019.
+[7] R. Li, C. Sturtivant, J. Yu, and X. Cheng, “A novel secure and efﬁcient
+data aggregation scheme for IoT,” IEEE Internet Things J., vol. 6, no. 2,
+pp. 1551–1560, Apr. 2019.
+[8] Y. Chen, J. Martinezortega, P. Castillejo, and L. Lopez, “A homomorphic-
+based multiple data aggregation scheme for smart grid,” IEEE Sensors J.,
+vol. 19, no. 10, pp. 3921–3929, May 2019.
+[9] J. Liu, J. Weng, A. Yang, Y. Chen, and X. Lin, “Enabling efﬁcient and
+privacy-preserving aggregation communication and function query for fog
+computing-based smart grid,” IEEE Trans. Smart Grid, vol. 11, no. 1,
+pp. 247–257, Jan. 2020.
+[10] Y. Su, Y. Li, J. Li, and K. Zhang, “LCEDA: Lightweight and
+communication-efﬁcient data aggregation scheme for smart grid,” IEEE
+Internet Things J., vol. 8, no. 20, pp. 15639–15648, Oct. 2021.
+[11] X. Zhang, C. Huang, Y. Zhang, and S. Cao, “Enabling veriﬁable privacy-
+preserving multi-type data aggregation in smart grids,” IEEE Trans. De-
+pendable Secure Comput., vol. 19, no. 6, pp. 4225–4239, Nov./Dec. 2021.
+[12] S. Chen, Z. Pang, H. Wen, K. Yu, T. Zhang, and Y. Lu, “Automated labeling
+and learning for physical layer authentication against clone node and Sybil
+attacks in industrial wireless edge networks,” IEEE Trans. Ind. Inform.,
+vol. 17, no. 3, pp. 2041–2051, Mar. 2021.
+[13] M. Alazab, M. Alazab, A. Shalaginov, A. Mesleh, and A. Awajan, “Intelli-
+gent mobile malware detection using permission requests and API calls,”
+Future Gener. Comput. Syst., vol. 107, pp. 509–521, 2020.
+[14] T. R. Gadekallu et al., “Blockchain for edge of things: Applications,
+opportunities, and challenges,” IEEE Internet Things J., vol. 9, no. 2,
+pp. 964–988, Jan. 2022.
+[15] P. B et al., “Toward blockchain for edge-of-things: A new paradigm,
+opportunities, and future directions,” IEEE Internet Things Mag., vol. 4,
+no. 2, pp. 102–108, Jun. 2021.
+[16] X. Luo, K. Xue, J. Xu, Q. Sun, and Y. Zhang, “Blockchain based secure
+data aggregation and distributed power dispatching for microgrids,” IEEE
+Trans. Smart Grid, vol. 12, no. 6, pp. 5268–5279, Nov. 2021.
+[17] C. Regueiro, I. Seco, S. de Diego, O. Lage, and L. Etxebarria, “Privacy-
+enhancing distributed protocol for data aggregation based on blockchain
+and homomorphic encryption,” Inf. Process. Manage., vol. 58, no. 6, 2021,
+Art. no. 102745.
+[18] W. Lu, Z. Ren, J. Xu, and S. Chen, “Edge blockchain assisted lightweight
+privacy-preserving data aggregation for smart grid,” IEEE Trans. Netw.
+Service Manage., vol. 18, no. 2, pp. 1246–1259, Jun. 2021.
+[19] S. Chen, L. Yang, C. Zhao, V. Varadarajan, and K. Wang, “Double-
+blockchain assisted secure and anonymous data aggregation for fog-
+enabled smart grid,” Engineering, vol. 8, pp. 159–169, 2022.
+[20] B. Li, Y. Tan, A.-G. Wu, and G.-R. Duan, “A distributionally robust
+optimization based method for stochastic model predictive control,” IEEE
+Trans. Autom. Control, vol. 67, no. 11, pp. 5762–5776, Nov. 2021.
+[21] J. Zhang, S. Peng, Y. Gao, Z. Zhang, and Q. Hong, “APMSA: Adversarial
+perturbation against model stealing attacks,” IEEE Trans. Inf. Forensics
+Secur., vol. 18, pp. 1667–1679, Feb. 2023.
+[22] K. Xue, B. Zhu, Q. Yang, D. S. Wei, and M. Guizani, “An efﬁcient and
+robust data aggregation scheme without a trusted authority for smart grid,”
+IEEE Internet Things J., vol. 7, no. 3, pp. 1949–1959, Mar. 2019.
+[23] P. Paillier, “Public-key cryptosystems based on composite degree resid-
+uosity classes,” in Proc. Int. Conf. Theory Appl. Cryptographic Techn.,
+1999, pp. 223–238.
+[24] C. Dwork, F. McSherry, K. Nissim, and A. Smith, “Calibrating noise to
+sensitivity in private data analysis,” in Proc. Theory Cryptogr.: 3rd Theory
+Cryptogr. Conf., 2006, pp. 265–284.
+[25] A. S. Kittur and A. R. Pais, “A new batch veriﬁcation scheme for ECDSA∗
+signatures,” S¯adhan¯a, vol. 44, no. 7, pp. 1–12, 2019.
+[26] H. Shen, M. Zhang, and J. Shen, “Efﬁcient privacy-preserving cube-data
+aggregation scheme for smart grids,” IEEE Trans. Inf. Forensics Secur.,
+vol. 12, no. 6, pp. 1369–1381, Jun. 2017.
+[27] E. Vahedi, M. Bayat, M. R. Pakravan, and M. R. Aref, “A secure
+ECC-based privacy preserving data aggregation scheme for smart grids,”
+Comput. Netw., vol. 129, pp. 28–36, 2017.
+[28] A. Mohammadali and M. S. Haghighi, “A privacy-preserving homomor-
+phic scheme with multiple dimensions and fault tolerance for metering
+data aggregation in smart grid,” IEEE Trans. Smart Grid, vol. 12, no. 6,
+pp. 5212–5220, Nov. 2021.
+[29] D. Kifer and B.-R. Lin, “Towards an axiomatization of statistical privacy
+and utility,” in Proc. 29th ACM SIGMOD-SIGACT-SIGART Symp. Princ.
+Database Syst., 2010, pp. 147–158.
+[30] W. Tang, J. Ren, K. Deng, and Y. Zhang, “Secure data aggregation of
+lightweight E-healthcare IoT devices with fair incentives,” IEEE Internet
+Things J., vol. 6, no. 5, pp. 8714–8726, Oct. 2019.
+Shuai Shang (Student Member, IEEE) received
+the B.Sc. degree in information security from
+the Xi’an University of Posts and Telecommu-
+nications, Xi’an, China, in 2020. He is cur-
+rently working in cyberspace security toward the
+Ph.D. degree with the School of Computer Sci-
+ence and Engineering, University of Electronic
+Science and Technology of China, Chengdu,
+China.
+His research interests include applied cryp-
+tography and privacy computing.
+Xiong Li (Member, IEEE) received the Ph.D.
+degree
+in
+computer
+science
+and
+technol-
+ogy from the Beijing University of Posts and
+Telecommunications, Beijing, China, in 2012.
+He is currently a Professor with the School
+of Computer Science and Engineering, Univer-
+sity of Electronic Science and Technology of
+China, Chengdu, China. He has authored or
+coauthored more than 200 referred articles. His
+research interests include data security and pri-
+vacy computing.
+Dr. Li was a recipient of the 2020 and 2015 Journal of Network and
+Computer Applications Best Research Paper Award and the 2020 IEEE
+Systems Journal Best Paper Award.
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:56:47 UTC from IEEE Xplore.  Restrictions apply. 
+4316
+IEEE TRANSACTIONS ON INDUSTRIAL INFORMATICS, VOL. 20, NO. 3, MARCH 2024
+Ke Gu (Associate Member, IEEE) received the
+Ph.D. degree in computer science and technol-
+ogy from the School of Information Science and
+Engineering, Central South University, Chang-
+sha, China, in 2012.
+He is currently an Associate Professor with
+the School of Computer and Communication
+Engineering, Changsha University of Science
+and Technology, Changsha. He has authored
+or coauthored more than 90 research papers in
+journals or conferences. His research interests
+include network and information security.
+Lei Li received the B.S. and M.S. degrees in au-
+tomation and pattern recognition & artiﬁcial in-
+telligence from Northwestern Polytechnical Uni-
+versity, Xi’an, China, in 2015 and 2018, respec-
+tively, and the Ph.D. degree in control theory
+and control engineering from Xidian University,
+Xi’an, in 2021.
+Her current research interests include quan-
+tum networks and artiﬁcial intelligence.
+Xiaosong Zhang received the B.S. degree
+in dynamics engineering from Shanghai Jiao
+Tong University, Shanghai, China, in 1990, and
+the M.S. and Ph.D. degrees in computer sci-
+ence from the University of Electronic Science
+and Technology of China (UESTC), Chengdu,
+China, in 1993 and 2011, respectively.
+He is currently a Professor with the School
+of Computer Science and Engineering, UESTC.
+He has coauthored more than 200 research arti-
+cles on computer security. His current research
+interests include software reliability, software vulnerability discovering,
+software test case generation, and reverse engineering.
+Vijayakumar Pandi (Senior Member, IEEE) re-
+ceived the B.E. degree in computer science and
+engineering from Madurai Kamaraj University,
+Madurai, India, in 2002, the M.E. degree in com-
+puter science and engineering from the Karunya
+Institute of Technology, Coimbatore, India, in
+2005, and the Ph.D. degree in computer science
+and engineering from Anna University, Chennai,
+India, in 2013.
+He is the former Dean and currently an As-
+sistant Professor with the Department of Com-
+puter Science and Engineering, University College of Engineering Tin-
+divanam, Melpakkam, India, which is a constituent college of Anna Uni-
+versity Chennai, India. He has seventeen years of teaching experience
+and he has produced four Ph.D. candidates successfully. He has also
+authored and co-authored more than 100 quality papers in various IEEE
+transactions/journals, ACM transactions, Elsevier, IET, Springer, Wiley
+and IGI Global journals. He is serving as Associate Editor in many SCI
+indexed journals, namely IEEE TRANSACTIONS ON INTELLIGENT TRANS-
+PORTATION SYSTEMS, International Journal of Communication Systems,
+PLOS One, International Journal of Semantic Web and Information
+Systems, and Security and Communication Networks. Moreover, He is
+serving as an Academic Editor in the International Journal of Organi-
+zational and Collective Intelligence, International Journal of Software
+Science and Computational Intelligence, International Journal of Cloud
+Applications and Computing, International Journal of Digital Strategy,
+Governance, and Business Transformation and Security and Privacy. He
+is also serving as a Technical Committee member in the journal Com-
+puter Communications. Recently, He was elevated to Editor-in-Chief
+Position in the journal Cyber Security and Applications. Until now he has
+authored four books for various subjects that belong to the Department
+of Computer Science and Engineering. He is a senior member of IEEE.
+He is also listed in the world’s Top 2% Scientists for citation impact for
+the calendar years 2021 and 2022 by Stanford University.
+Authorized licensed use limited to: Thammasat University. Downloaded on June 26,2026 at 07:56:47 UTC from IEEE Xplore.  Restrictions apply. 

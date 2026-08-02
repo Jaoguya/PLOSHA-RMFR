@@ -1,0 +1,2404 @@
+Received 17 March 2025, accepted 20 April 2025, date of publication 23 April 2025, date of current version 5 May 2025.
+Digital Object Identifier 10.1109/ACCESS.2025.3563487
+Adaptive Task Scheduling in Fog Computing
+Using Federated DQN and K-Means Clustering
+PRASHANTH CHOPPARA
+1 AND S. SUDHEER MANGALAMPALLI
+2, (Senior Member, IEEE)
+1School of Computer Science and Engineering, VIT-AP University, Amaravati, Andhra Pradesh 522237, India
+2Department of Computer Science and Engineering, Manipal Institute of Technology Bengaluru, Manipal Academy of Higher Education,
+Manipal, Karnataka 576104, India
+Corresponding author: S. Sudheer Mangalampalli (ms.sudheer@manipal.edu)
+This work was supported by the Manipal Academy of Higher Education, Manipal, Karnataka, India.
+ABSTRACT Task scheduling in distributed cloud and fog computing applications must be efficient to
+optimize resource utilization, minimize latency, and comply with strict service level agreements. The
+dynamic and heterogeneous of fog computing challenges such as balancing performance with variable task
+loads, resource constraints, and energy efficiency. This paper introduces a new Federated Learning Deep
+Queue-Learning (FLDQN) framework that integrates reinforcement learning with federated learning to
+overcome these challenges. The FLDQN approach enables decentralized task scheduling because fog nodes
+can train their local DQN models on localized data, merging their experiences to form a global model without
+sensitive data sharing. It further improves task prioritization by classifying tasks based on their execution time
+and deadlines, ensuring that high-priority tasks are scheduled first, which reduces SLA violations and task
+rejection rates. The proposed model dynamically adapts to the changing conditions of the fog environment
+through iterative learning that continuously improves work allocation. Substantial experiments conducted
+on large and small sizes of dataset show that the proposed FLDQN outperforms others, including standalone
+DQN and graph-based GGCN. For all dataset sizes small, medium, and large datasets, it reduces makespan
+by up to 30%, improves throughput, and reduces energy by distributing tasks on the most efficient node based
+on current system states. The results demonstrate the ability of FLDQN to optimize task execution in real
+time, while addressing the scalability and privacy issues inherent in fog computing. Combining federated
+and reinforcement learning proposed framework provides a flexible solution for distributed task scheduling,
+which is well suited for latency-sensitive applications in industrial automation, healthcare monitoring, and
+smart city deployments.
+INDEX TERMS
+Federated learning, K-means, task scheduling, SLA, makespan, throughput, energy
+consumption, task rejection rate.
+I. INTRODUCTION
+Cloud computing has transformed IT infrastructure, pro-
+viding on demand, scalable access to resources, allowing
+businesses and users to offload tasks to centralized data
+centers. Task scheduling in cloud computing was a challenge,
+especially for latency-sensitive applications [1]. A major
+limitation is high latency. Because cloud resources are
+concentrated in distant data centers, they must travel long
+distances, which can cause delays that affect real-time appli-
+cations such as self-driving cars or industrial automation.
+The associate editor coordinating the review of this manuscript and
+approving it for publication was Nitin Gupta
+.
+Internet connectivity between the cloud and devices can also
+create bottlenecks, leading to performance degradation in
+data-intensive tasks [2], [3]. The second problem is related to
+the limited control of the physical infrastructure. Users cannot
+directly control the hardware, which makes it difficult to meet
+specific needs or allocate resources efficiently in the face of
+changing workloads. This leads to overuse and under utiliza-
+tion of resources [4]. Large cloud data centers consume more
+energy, which is problematic because these centers require
+an energy for data processing and storage, which further
+increases inefficiencies when data is transmitted between the
+cloud and end-user applications. Fog computing improves
+cloud computing by bringing data processing closer to the
+75466
+ 2025 The Authors. This work is licensed under a Creative Commons Attribution 4.0 License.
+For more information, see https://creativecommons.org/licenses/by/4.0/
+VOLUME 13, 2025
+P. Choppara, S. S. Mangalampalli: Adaptive Task Scheduling in Fog Computing Using Federated DQN
+data source [5]. In contrast to cloud systems that use large
+central data centers, fog computing reduces the distances that
+data has to travel and thus helps overcome the problem of
+delays and slowdowns. Such an architecture improves the
+performance of real-time applications by reducing latency
+in transmission, which is very essential in time-sensitive
+tasks such has self-driving cars and smart city systems. Fog
+computing reduces network traffic because data processing
+is done locally, while important data is sent to the cloud.
+This reduces the load on central servers and improves overall
+system performance. In fog computing, task scheduling
+is very flexible, sharing the workload among edge nodes
+according to available resources and application needs [6],
+[7]. This changing setup helps prevent overloading and
+ensures that resources are used efficiently. Fog computing is
+decentralized, which helps save energy because it minimizes
+the need for long distance data transfers. It can spread tasks
+across multiple edge devices, making it better at handling
+real-time applications [8]. By processing data at edge nodes,
+it avoids the slowdowns that occur in the cloud, leading
+to faster responses and making it perfect for situations that
+require fast data processing. This makes fog computing a
+more efficient and environmentally friendly choice for many
+modern applications. Cloud and fog computing, federated
+learning, and federated deep queue-network reinforcement
+learning blend together to comprise a robust framework
+for task scheduling optimization [9]. DQN modeling works
+on deep neural networks for decision-making processes,
+so that the system can efficiently allocate tasks to appropriate
+resources with respect to both the current state and previous
+performance. On the contrary, federated learning permits
+several edge nodes or devices to learn independently models
+on local data and, as a reward, provide model updates without
+revealing the sensitive information so as to improve the
+overall efficiency of a global task scheduling strategy [10].
+Federated DQN learns optimal policies for scheduling
+based on continuous observations of local loads, resource
+availability, and processing capabilities. Every node in the
+system, whether it is a cloud server, fog node, or edge device,
+makes local scheduling decisions based on the version of
+the model. Over time, this decentralized learning approach
+allows the system to adapt to changing conditions and
+workloads that vary between nodes while improving the
+efficiency of task allocation. Collaborative learning between
+nodes enables a global model that better balances resources
+to achieve efficient task management. Some of the major
+issues with scheduling are handled by Federated DQN, such
+as avoiding any kind of overload to any kind of resource
+at any point in time, following deadline constraints that
+learn through experience to predict better times of execution
+for tasks, meaning less chance of rejection of tasks and
+greater possibility of successful completion. The network
+distributes tasks across different nodes. The reasons for such a
+distribution are optimal resource utilization, minimizing the
+possibility of SLA violations, and reducing system latency.
+K-means clustering is also applied to federated DQN for task
+prioritization. K-means clustering is an organization of tasks
+based on specific attributes, such as urgency level, resource
+requirements, or data size. For example, all time-dependent
+tasks can be summed up and assigned to low-latency
+resources in order to ensure the minimum possible delay.
+The federated DQN and K-means clustering provide the most
+convenient and efficient solution for task scheduling. The
+system learns from local data continuously and dynamically
+assigns tasks to optimize both resource allocation and task
+sequencing according to priority. The federated learning
+methodology further enhances this by allowing every node
+to engage in the model while maintaining privacy and data
+security, which makes the system scalable and robust. This
+eventually results in improving task throughput, along with
+a guarantee Moreover, it guarantees minimal energy usage
+by circumventing the overuse of devices that consume a sig-
+nificant amount of power and by effectively allocating tasks
+to the most energy-efficient resources. The model acquires
+the ability to allocate tasks suitably, thus optimizing energy
+expenditures alongside maximizing performance. Federated
+DQN represents a distributed approach to task management
+that reconciles system efficiency, energy consumption, and
+resource utilization while achieving both scalability and
+privacy.
+A. BACKGROUND AND MOTIVATION
+The rapid growth of Internet of Things (IoT) applications,
+smart cities, and edge-centric services has increased the
+need for low-latency, efficient, and scalable computing
+solutions. Cloud-based infrastructures based on centralized
+processing fail to meet these needs due to high network
+latency, bandwidth constraints, and centralized processing
+limitations. As a result, fog computing has emerged as a
+potential paradigm, bringing cloud capabilities to the edge
+through localized computation, low latency, and improved
+system responsiveness. However, the resource-constrained
+and decentralized nature of fog environments introduces
+serious challenges in task scheduling, resource management,
+and energy efficiency. Real-time task scheduling is a major
+challenge in fog computing, which involves making smart
+decisions for dynamic allocation of computational resources
+according to service level agreements (SLAs) and minimizing
+makespan, throughput, and energy consumption.
+Heuristic-based scheduling methods, while being optimal
+in static settings, do not cope well with the highly dynamic
+and volatile nature of fog workloads. This calls for the use
+of learning-based methods that can continuously improve
+scheduling policies in line with real-time system evolution.
+To mitigate this, federated learning (FL) and deep rein-
+forcement learning (DRL) have proven to be revolutionary
+solutions. FL facilitates decentralized model training on
+fog nodes, enabling them to learn scheduling policies in a
+collaborative manner without exchanging raw data, thereby
+preserving data confidentiality and reducing communication
+VOLUME 13, 2025
+75467
+P. Choppara, S. S. Mangalampalli: Adaptive Task Scheduling in Fog Computing Using Federated DQN
+overhead. At the same time, DRL provides an adaptive
+learning model that allows the system to learn and improve
+scheduling decisions over time from observed system states
+and workload fluctuations. In particular, Deep Q-Networks
+(DQN) - a robust DRL method - has proven effective in
+efficiently solving complex scheduling problems by learning
+optimal work allocation policies through a reward-based
+mechanism.
+This paper presents a novel approach to task scheduling in
+fog computing environments by combining federated learn-
+ing and deep reinforcement learning. The main contributions
+are as follows:
+• We present a decentralized scheduling framework
+that leverages Federated Learning Deep Q-Networks
+(FLDQN). This approach enhances scalability and
+privacy since fog nodes can perform local training while
+contributing to a global model without revealing private
+data.
+• A task classification mechanism is developed using
+K-means clustering to prioritize tasks based on execu-
+tion time and deadlines. This minimizes SLA violations
+and optimizes resource allocation.
+• The FLDQN model dynamically adjusts to system
+state changes, optimizing task assignment to reduce
+makespan, improve throughput, and lower energy con-
+sumption across varying workload conditions.
+• Extensive experiments on multiple datasets demon-
+strate that FLDQN outperforms existing models like
+standalone DQN and GGCN, LSTM achieving up to
+30% makespan reduction, higher throughput, and energy
+efficiency improvements.
+• By addressing scalability and privacy issues in fog
+computing, this framework provides a solution for
+minimizing the latency for applications such as real-
+time, smart cities, healthcare, and industrial automation.
+The remaining paper organized to Section II Related Work,
+Section III Mathematical modeling and system architecture,
+Section IV Proposed Framework and Section V Experimental
+results are organized as follows.
+II. RELATED WORK
+In [11], the author proposes a new approach to task
+scheduling optimization targeting IoT systems with cloud-
+fog computing. An advanced hybrid algorithm AEOSSA
+proposed that integrates the advantages of AEO and SSA.
+This synergistic merger solves the intrinsic problems of
+AEO due to AEO’s location trapping, which is weakly
+exploited due to its weak exploitation ability. This makes
+AEOSSA efficient and more effective in solving scheduling
+problems. AEOSSA also defines the makespan, throughput
+and the overall performance of optimize for these critical
+metrics. To demonstrate its utility, the authors set up their
+experiments on a very wide range of synthetic and real data
+sets, namely NASA Ames iPSC/860 and HPC2N workloads.
+The experimental results prove that AEOSSA outperforms all
+other competing conventional state-of-the-art metaheuristic
+algorithms, such as PSO, Harris Hawkes Optimization
+(HHO), and Firefly Algorithm (FA). The proposed algorithm
+has better convergence time and higher throughput with less
+makespan compared to other tasks.
+In [12], a novel algorithm named PQFAHP (Priority
+Queue Fuzzy Analysis Hierarchical Process) is designed
+for task-scheduling in a mobile fog computing (MFC).
+Fuzzy logic and Analytic Hierarchy Process are integrated
+to base the coordinated scheduling of tasks on several
+criteria such as completion time, energy consumption,
+RAM and deadline. It prioritizes MFC tasks and optimizes
+resource allocation for fast execution with minimized energy
+consumption. The study also raises awareness that MFC can
+be used as a medium to get resource-intensive applications
+to mobile devices with very low energy resources. The
+essence of PQFAHP is to provide dynamic scheduling of
+deadline-sensitive tasks using multiple parameters to deter-
+mine task priorities. PQFAHP is proven to improvements
+in waiting time, delay, SLA, average response time and
+task scheduling efficiency compared to traditional scheduling
+algorithms such as FCFS, min-heap and max-heap.
+In author’s [13], a multi-objective scheduling scheme is
+designed to efficiently execute bag-of-task-type applications
+in diverse fog computing environments. The objectives of this
+mechanism are to optimize execution cost, execution time,
+and energy consumption. The Cost-Aware Multi-Objective
+Scheduling Algorithm (CAMOSA) solves task scheduling
+problems across heterogeneous fog nodes with different
+resource capabilities and user requirements. CAMOSA relies
+on metaheuristics for optimization to achieve trade-offs
+between conflicting objectives. The main results of the
+experimental evaluation are that CAMOSA outperforms
+existing approaches in terms of execution cost, task comple-
+tion time, and energy consumption under various workload
+conditions. This makes it possible to adapt CAMOSA to
+different resource configurations that dynamically change
+with user needs, thereby strengthening the applicability of
+this algorithm to real-world fog computing deployments. This
+study has limitations, such as it does not scale in larger and
+more complex fog infrastructures and requires fine-tuning of
+algorithm parameters for different environments.
+[14] In design, task scheduling in fog computing envi-
+ronments addresses the needs of IoT applications in terms of
+low makespan and efficient resource utilization. To this end,
+the authors present a DRL based algorithm for scheduling
+called Clipped Double Deep Queue-Learning Scheduling
+(CDDQLS). The goals of the algorithm are to reduce energy
+consumption, reduce service latency, optimize costs, and
+guarantee timely execution of tasks across fog, edge, and
+cloud nodes. The new resource management model includes
+a dual-queue mechanism that allows for prioritization and
+rescheduling of long-waiting tasks in virtual machine queues.
+In this way, the algorithm dynamically generates a productive
+estimate of system states and continues to take appropriate
+actions to improve scheduling efficiency within a deep
+reinforcement learning framework. A three-layer architecture
+75468
+VOLUME 13, 2025
+P. Choppara, S. S. Mangalampalli: Adaptive Task Scheduling in Fog Computing Using Federated DQN
+is proposed, where tasks are first classified according to
+latency types and assigned to specific servers in the edge, fog,
+or cloud layers to balance resource usage and reduce latency.
+The proposed work compared aganist the baseline algorithms
+FCFS, random scheduling and Q-learning.
+In [15], a multi-objective scheduling technique specifically
+designed for CPSS in fog computing environments is
+introduced. The authors aim to solve problems that are
+different from the general problems for task scheduling with
+different priorities, resource requirements, and deadlines. The
+authors propose an approach using optimization methods to
+balance multiple objectives, which reduces the time taken
+by tasks to be executed, resource consumption, and energy
+consumption. The authors propose a hybridization of genetic
+algorithms and PSO to improve scheduling towards efficient
+workload management. This hybridization takes advantage of
+both the global search capability of genetic algorithms and the
+fast convergence of PSO. Its effectiveness is demonstrated
+through simulations by showing gains in task completion
+time, energy efficiency, and system performance compared
+to conventional algorithms. However, limitations include the
+potentially high computational costs of this hybrid approach
+in large-scale systems and the need for careful parameter
+tuning to achieve optimal performance.
+In [16], the author proposes a task scheduling technique
+in fog-cloud computing environments called E-AVOA-TS.
+This technique optimizes task scheduling with respect
+to multiple objectives: reducing execution time, reducing
+energy consumption, and improving resource utilization. The
+authors improve the AVOA by adding additional rules for
+the exploration and exploitation phases. The E-AVOA-TS
+algorithm specifically targets tasks that share hybrid fog-
+cloud architectures. Fog nodes or cloud data centers with
+respect to their requirements and priorities. E-AVOA-TS is
+compared against the based line algorithms PSO and ACO
+proposed approach shows the better performs of execution
+time, energy efficiency and load balancing.
+In the author’s [17], a task scheduling optimization
+designed for BoT in hybrid cloud-fog computing environ-
+ments. This is done with the introduction of a new algorithm
+called TCaS. The TCaS algorithm balances the execution
+time and cost while facing the constraints of cloud and
+fog nodes. TCaS uses evolutionary strategies to improve
+TCaS’s efficiency for task allocation, as well as to create
+evolutionary strategies for user experience. In addition, the
+research shows how isolated centralized cloud systems can no
+longer meet the needs of latency-sensitive IoT applications.
+TCaS bridges the gap between high performance and cost
+efficiency by using a fog layer for low-latency-required
+tasks and the cloud for delay-tolerant resource-required ones.
+The algorithm is tested on several datasets with different
+task sizes and is compared to existing Bee Life Algorithm,
+MPSO, and round robin methods. Experimental results show
+that TCaS baseline methods in terms of implementation
+time and cost. It also shows a 15.11% improvement over
+BLA and an 11.04% improvement over MPSO, specifically
+in terms of time- and cost metrics against those metrics.
+TCaS is said to be able to create a flexible framework for
+dynamic task scheduling, which promises real-world cloud-
+fog applications. Future work must address the need to
+explore multiple multi-objective optimization models and
+other system constraints.
+The author proposes Dynamic Fault Tolerant Learning
+Automata (DFTLA) in [18]. This approach is used to
+overcome the challenges posed by fog computing due to
+its dynamic heterogeneity and failure-prone nature. DFTLA
+performs reliable tasks and optimizes quality of service
+(QoS) and energy consumption. It uses a combination
+of stochastic learning automata along with dynamic task
+runtime estimation models, which makes it robust and
+adaptive against any resource failure. Furthermore, DFTLA
+uses a dual approach of task replication and task reexecution
+to balance fault tolerance and resource consumption. The task
+estimation the run time model on a normal distribution, which
+makes accurate estimates of execution times under unstable
+conditions. Energy-aware decision-making mechanism, tasks
+are placed on fog nodes that have sufficient residual
+energy, thereby avoiding failure. The algorithm dynamically
+changes the states of fog nodes and changes the task
+allocation, which optimizes the overall system performance.
+Simulation results clearly show that DFTLA was a traditional
+algorithms in terms of reliability, robustness, and energy
+efficiency. Examples of parameters where improvement can
+be achieved include task guarantee ratio, response time, and
+load imbalance level.
+In author [19] For task scheduling, two effectively
+designed meta-heuristic frameworks, ACO and PSO, are
+proposed to address task scheduling challenges. This
+work focuses on improving QoS, as well as balancing
+the load between fog nodes according to communication
+costs and existing node loads. The proposed ant colony
+optimization-based algorithm simulates the foraging behav-
+ior of ants to optimize such task offloading, while the
+particle swarm optimization algorithm uses swarm intelli-
+gence. Experimental evaluations show how these proposed
+schedulers using ACO outperform the PSO algorithm and the
+standard round robin method in terms of average response
+times, load balancing, and standard deviation of response
+times. ACO has fast convergence and better performance
+for real-time IoT applications with progressively increasing
+sensors and fog nodes.
+In [20], the author presents an energy-aware algorithm
+for task scheduling in IIoT applications beyond fog com-
+puting environments. The improved algorithm designed is
+called HHOLS (Harris Hawkes Optimization with Local
+Search Strategy), which discusses the traditional Harris
+Hawkes optimization algorithm applied to solve some of
+these performance metrics energy consumption, makespan,
+cost. The overall thrust is on achieving energy efficiency
+while minimizing performance and environmental objectives.
+VOLUME 13, 2025
+75469
+P. Choppara, S. S. Mangalampalli: Adaptive Task Scheduling in Fog Computing Using Federated DQN
+It includes a swap mutation operation, a local search method
+to distribute workloads among virtual machines (VMs), and
+an initial generalization and scaling step to account for the
+discrete nature of the task scheduling problem. According
+to the experimental findings, the HHOLS algorithm clearly
+performs better than its cutting-edge substitutes in terms of
+cost, CDER, and energy consumption than PSO, the flower
+pollination algorithm, and multi-verse optimizers.
+In [21], the author proposes a delay-optimal and low-cost
+scheduling for Internet of Things tasks in cloud-fog collab-
+orative networks with double blockchain technology (DBC).
+Such imperfection needs to be addressed with optimal com-
+pletion times against reliable, resource-controlled and highly
+energy-efficient fog nodes. The solution should be in the
+form of a novel architecture of task scheduling with a proof-
+of-authority-based protocol and two blockchain-enabled
+algorithms DBRP and DBAACS. IoT promises improved
+system security by storing transaction data in the cloud and a
+reputation record of fog nodes inside the fog layer. The main
+purpose of this algorithm is to assign different priorities to
+fog nodes based on their reputation value, thereby reducing
+task deadline violations. DBAACS optimizes task scheduling
+using ant colony principles to develop more energy-efficient
+and less makespan scheduling. The algorithms are tested with
+different metrics of task completion rate, makespan, energy
+consumption, and task deadline violation time. Experimental
+test results for DBAACS have proven promising results with
+improved task completion rates, reduced deadline violations,
+and improved energy efficiency compared to benchmark
+algorithms such as Priority-Aware Semi-Greedy (PSG) and
+Greedy for Energy (GfE). However, the work reports that
+there is a high computational overhead to perform DBC and
+that the system scales poorly when applied to large and highly
+dynamic environments.
+In the author [22] is a fog-assisted federated learning
+framework specifically developed to improve older federated
+learning (FL) systems, especially in resource-constrained
+IoT environments. A common feature of traditional FL
+frameworks is a centralized global aggregation process,
+which results in various operational problems such as
+bottlenecks or communication overheads and single points
+of failure. CosmoFogFL addresses these problems by aggre-
+gating fog nodes into local aggregators placed according
+to geographical criteria. These fog nodes perform local
+aggregation to greatly reduce communication latency and
+energy consumption while maintaining the accuracy of the
+model. FogFL introduces a new heuristic-based method that
+dynamically selects the optimal fog node as a global aggre-
+gator, further reducing the dependence on centralized cloud
+servers. This dynamic selection mechanism leads to reliable
+availability in the system and enables efficient training of
+distributed machine learning models in a timely manner. Full
+simulation and experimental setups show that FogFL reduces
+communication latency by up to 85% and reduces energy
+consumption by about 92% compared to existing traditional
+frameworks such as FedAvg and hierarchical FL (HFL). The
+framework is characterized by reducing global aggregation
+frequency, fault tolerance, and very high test accuracy.
+The study also suggests future research directions such
+as optimizing client selection for large-scale deployment,
+including modern resource management techniques, as they
+can provide further performance improvements.
+In the author [23]A microservice-based computational
+offloading framework along with CACOTS is developed
+diverse fog-cloud applications. The framework is named
+MSCFS (Microservice Container Fog System), which over-
+comes the shortcomings of cloud systems that rely on heavy-
+weight virtual machines, high cost, overhead, and long boot
+times. Services, such as IoT applications that require mobility
+and are delay-sensitive, benefit more from being imple-
+mented through MSCFS using a lightweight container-based
+microservice approach. The proposed CACOTS framework
+for task scheduling optimizes task execution in a range of
+fog-cloud systems through three key steps: task sequencing,
+resource matching, and task scheduling. Task sequencing
+prioritizes tasks using rules such as Early Due Date (EDD)
+based on parameters such as deadline, size, and slack
+time. Resource matching is performed using multi-criteria
+decision-making methods such as AHP and TOPSIS for
+optimal allocation of tasks to fog servers. Then, it comes
+up with a scheduling algorithm that minimizes the overall
+allocation cost by using an iterative approach while consider-
+ing communication and computational costs while allocating
+resources to tasks.
+In [24] author proposes a multi-objective GWO approach
+for task scheduling in cloud-fog environments. The opti-
+mization study focuses on some key QoS criteria, such as
+delay and energy consumption, which are very important
+for efficient IoT applications. The authors also demonstrate
+the trade-off between assigning tasks to fog nodes—with
+low transmission delay but high energy consumption—and
+to cloud servers—with low energy consumption but high
+transmission latency. The MGWO algorithm allows for
+balanced exploration and exploitation in the optimization
+process by taking advantage of the social hierarchy and
+hunting behavior of gray wolves. The algorithm also incor-
+porates features such as fitness functions for multi-objective
+optimization, mutation operators to improve diversity, and
+Pareto dominance as an optimal solution-selection approach.
+A novel task scheduling architecture has been proposed by
+the author in [25] with the integration of a balanced VM allo-
+cation policy for the fog computing platform. Furthermore,
+various combinations of VM selection strategies and the
+allocation policy enable optimal resource allocation as well
+as task scheduling for fog environments. Finally, this proposal
+limits the task processing overhead, energy consumption, and
+communication delay towards high quality of service. The
+seven VM allocation models local regression, interquartile
+range, local regression robust, non-power aware, median
+absolute deviation, dynamic voltage and frequency scaling,
+75470
+VOLUME 13, 2025
+P. Choppara, S. S. Mangalampalli: Adaptive Task Scheduling in Fog Computing Using Federated DQN
+and static threshold were compared with four VM selection
+approaches: minimum migration time, maximum correlation
+(MC), random selection, and maximum utilization. A total
+of 22 unique configurations were tested using the iFogSim
+simulator under stable simulation conditions with 50 VMs
+and 50 nodes.
+The author in [26] designed a task scheduling algorithm
+that specifically targets fog computing environments and can
+address important issues such as priority constraints on tasks,
+large resource heterogeneity, and the limitation due to limited
+processing capacity of fog nodes. The tasks are modeled
+in the form of DAG which allows them to be executed in
+parallel, thereby reducing the overall computational costs and
+makespan. The algorithm runs in three stages. The first stage
+is related to level sorting, in which all independent tasks are
+sorted into levels that can be executed in parallel, followed
+by the task prioritization stage, which takes into account the
+execution cost, data travel cost. Like its predecessors, this
+means that critical tasks in the stream are executed faster.
+The final step is a balanced processor selection strategy,
+which is a global optimum processor to minimize local
+and overall makespan and computational costs. The authors
+get rid of unnecessary task movement between processors
+and improve the efficiency level by adding a non-crossover
+mechanism because irrelevant migrations have no benefit in
+the performance of the application.
+The author has designed multi objective simulated anneal-
+ing (MOSA) algorithms based optimizing task scheduling in
+cloud fog environments in [27]. This study seeks solutions
+to some major problems, such as balancing execution
+cost, task deadline, and service delay time against tasks,
+subject to access control requirements for fog and cloud
+node execution. To find a compromise between conflicting
+objectives, an innovative goal programming approach is
+integrated into the MOSA algorithm: GPA guarantees an
+efficient and fair scheduling mechanism. The algorithm under
+consideration produces a very realistic scheduling scenario
+due to resource heterogeneity, network speed processing,
+costs, etc.) and task constraints, especially with respect to
+deadlines and access level control. The last one is to indicate
+whether the tasks are executed according to user-defined
+priorities on the IoT devices’ cloud nodes, fog nodes, or both.
+A penalty-based transformation is performed to enforce
+such constraints before the mathematical formulation, which
+is used for optimization on the multi-objective scheduling
+problem.
+In [28], the author proposed a hybrid heuristic (HH)-based
+approach for task scheduling in smart production lines using
+fog computing. The algorithm includes an improved version
+of the improved particle swarm optimization (IPSO) and an
+ant colony optimization (IACO) to address the problems of
+heterogeneity and resource constraints in fog nodes. The
+primary objectives are focused on reducing energy con-
+sumption and completion times, with secondary objectives
+such as improving production efficiency, product quality, and
+equipment utilization in smart manufacturing. The proposed
+fog computing framework consists of four layers: terminal
+devices, fog nodes, cloud servers, and application. The work
+to be done is a mixture of specific values such as fault
+detection and inventory processing, which are performed
+with HH. IPSO guarantees fast convergence and initial
+solutions, which are further improved by IACO to be close
+to the accuracy and efficiency. The model designed for
+task scheduling integrates energy consumption and latency,
+two key measures that are captured by using mathematical
+models to ensure the optimal allocation of tasks to fog nodes.
+Simulation results show that floor-level performance can be
+achieved using the HH algorithm compared to independent
+IPSO, IACO, and Round Robin (RR) methods.
+Author [29] RAPTS is a technique for task scheduling
+intended for different fog environments. The main function
+of RAPTS is to managed various tasks of fog computing,
+maximize the available resources, minimize the response
+time and makespan, and complete the deadline-bound tasks
+within a given period. The RAPTS algorithm consists of
+two main components - RAPTS priority and minimum
+completion time (MCT). There are two stages of operation
+by the algorithm RAPTS. The first stage allows the RAPTS
+prioritizer to classify various incoming tasks into high,
+medium, or low priority tasks according to their expected
+deadlines and the processing latencies of the available VMs
+(virtual machines). The corresponding queue is assigned
+to the most appropriate offer to answer its deadline. The
+mapping of tasks from queues to VMs using minimum
+completion time is done by MCT, which contributes to
+better resource utilization and reduces processing latency for
+primary tasks in the queue. This approach was developed
+and tested using the iFogSim simulator. Simulation results
+show significant performance gains achieved by RAPTS over
+other existing scheduling algorithms such as RACE. In terms
+of resource utilization, for example, RAPTS achieved up
+to 29% improvement, 53% reduction in response time,
+15% improvement in makespan, 11% reduction in cost,
+and 43% improvement in task deadline. Committed. While
+this approach appears to score significantly on multiple
+performance metrics, it does not validate real-world datasets
+and lacks scalability tests for large-scale systems.
+The author in [30] has designed an energy-efficient and
+low-latency of scheduling framework for the Internet of
+Medical Things operating in fog-cloud systems EeIoMT. The
+framework aims to provide solutions to issues such as latency,
+energy consumption, and resource management in the health
+IoT domain, specifically to respond to clinical needs through
+applications that demand real-time health monitoring, such
+as health monitoring for cardiovascular conditions. This
+study involves the use of ECG sensors and fog computing
+to provide continuous and accurate patient monitoring
+with less dependence on a centralized cloud computing
+facility. The proposed EEIoMT framework is adopted here
+as a three-tier architecture model that includes IoT edge
+VOLUME 13, 2025
+75471
+P. Choppara, S. S. Mangalampalli: Adaptive Task Scheduling in Fog Computing Using Federated DQN
+devices, fog nodes, and cloud servers. It involves appropriate
+classification of patient conditions such as critical, moderate
+and normal for the most appropriate task prioritization using
+the Early Deadline First (EDF) algorithm. Then, such tasks
+can be dynamically assigned to fog nodes for completion
+based on resource availability and energy consumption and
+latency optimization through the Modified Weighted Sum
+Method (MWSM). Critical tasks are processed with minimal
+delay on fog nodes, while non-critical tasks are moved to
+cloud resources when needed. Simulations performed using
+iFogSim2 and real-life ECG datasets show that the EeIoMT
+framework outperforms existing models such as CHTM, LBS
+and FNPA.
+The author’s [31] proposes an electric earthworm opti-
+mization algorithm, which is going to work on hybrid
+metaheuristic scheduling techniques for different cloud-fog
+computing environments. It solves some job execution prob-
+lems such as IoT jobs, makespan, and energy consumption
+during execution. EEOA is a completely new combination
+of EOA and EFO to improve the efficient use of task
+scheduling in terms of cost and energy while ensuring SLAs.
+EEOA works effectively with ways to balance local and
+global search capabilities for efficient task allocations across
+heterogeneous fog and cloud nodes. Simulation experiments
+were conducted using real workloads from HPC2N and
+CEA-Curie datasets. The results indicate that the proposed
+algorithm EEOA can outperform existing algorithms such
+as CSPSO, CSDEO, h-DEWOA, and BLEMO in three
+aspects: makespan, total implementation cost, and energy
+consumption. The main improvements are 94% reduction
+in energy, 89% efficiency increase, and 87% cost reduction
+under workload conditions.
+In the author [32] presents FLight, a lightweight FL
+framework that is extensible to edge, fog, and cloud. FLight,
+based on the FogBus2 framework, addresses the challenges
+of latency, resource heterogeneity, and data privacy in IoT
+applications. It provides synchronous and asynchronous
+federated learning models for flexibility and efficiency
+in distributed environments. An innovative heuristic-based
+worker selection for dynamic worker selection based on
+parameters such as CPU frequency, memory, and network
+characteristics for model training is integrated into FLight.
+This makes optimal resource utilization and speeds up the
+training process. This framework has proven to be very
+effective in time improvement in fact, a 64% synchronous
+FL time reduction was achieved, while there was a 34%
+difference in terms of asynchronous FL time compared
+to baseline methods. Furthermore, with its containerized
+implementation, FLIGHT can be seamlessly deployed across
+heterogeneous devices. This study emphasizes the practical-
+ity of the framework through real-world testing and confirms
+its scalability and adaptability in various IoT applications.
+The author of [33] proposes an improved fireworks
+algorithm for scheduling in cloud-fog (I-FASC). It describes
+a completely different way to optimize task scheduling in fog
+computing. It applies principles of the fireworks algorithm
+(FA) but adds improvements such as a method for detecting
+the explosion radius that does not allow missing optimal
+solutions. It is related to the goals of reducing the time to
+complete the task and balancing the load on fog devices,
+which is a very important aspect to consider in managing
+resource-constrained and heterogeneous fog nodes. The
+task scheduling method consists of three important steps:
+task clustering, resource integration, and task allocation.
+Tasks are grouped based on their requirements in terms
+of storage, bandwidth, and processing time, and efficient
+resource allocation is performed. The improved algorithm
+dynamically changes the radius and number of sparks
+to balance global and local search for job scheduling.
+Simulation results confirm the superiority of the I-FASC
+solution over other existing methods such as rank-ACO and
+DFGA on execution time and load balancing.
+The author [34] introduced a completely new multi-
+objective simplified swarm optimization (MOSSO) algorithm
+to solve scheduling problems in fog environments. The
+research attempts to optimize conflicting metrics such as
+makespan and cost with respect to trade-offs in fog and
+cloud models. The proposed MOSSO algorithm uses the
+feature simplified SSO, which developed an elite mechanism,
+which improves the solution quality, convergence speed,
+and computational efficiency. The model provides specific
+evaluations of processing rates, costs, and deadlines for tasks
+that guarantee optimal allocations for fog and cloud nodes.
+The newly designed algorithm addresses the characteristics
+of fog, namely low latency, geographical distribution of
+resources and heterogeneity by incorporating transmission
+cost and processor idle costs into the objective function.
+Dynamic assignment of tasks to processors is also done to
+balance the workload and reduce processing latencies and
+execution costs.
+The author [35]designed a framework that combines
+reinforcement learning (RL) with lightweight large language
+models (LLMs) to optimize task scheduling in multi-cloud
+environments (MCE). The research attempts to overcome
+the problems associated with consumer electronic devices
+(CEDs) that may be limited in hardware but demand effective
+task processing using cloud resources. The authors present
+a framework with a lightweight LLM that acts as a helper
+agent to a deep reinforcement learning (DRL) agent for
+improved scheduling options. The LLM is trained on a
+task scheduling skill database incorporating optimization
+objectives and empirical energy consumption data. The
+scheduling is abstracted as a Markov Decision Process
+(MDP), describing states, actions, and rewards to minimize
+cost, makespan, and energy consumption
+The author [36] proposed a multi-agent deep reinforce-
+ment learning (MARL) framework for workflow scheduling
+optimization in geo-distributed cloud data centers powered
+by renewable and conventional energy. The hierarchical
+structure assigns workflows to data centers to compute tasks
+75472
+VOLUME 13, 2025
+P. Choppara, S. S. Mangalampalli: Adaptive Task Scheduling in Fog Computing Using Federated DQN
+through a global scheduler and local schedulers. To increase
+efficiency, the system adopts centralized training and decen-
+tralized execution, which is designed as a partially observable
+Markov Decision Process (POMDP). Localized information
+sharing reduces computational complexity, and a common
+reward structure encourages cooperation between agents.
+CloudSim and Keras experiments demonstrate 47% lower
+energy consumption and five times faster convergence than
+traditional approaches. The proposed framework preserves
+optimal execution times while increasing energy efficiency.
+The proposes [37] the MCWS-A3C algorithm to optimize
+cost, makespan, and resource utilization in multi-cloud
+workflow scheduling. Using reinforcement learning (RL),
+each cloud service provider (CSP) acts as an agent, making
+decentralized scheduling decisions. This study enhances
+the A3C algorithm with a customized critical network
+(MCWS-CriticNet) designed for classical workflows and a
+multi-objective reward function. Experiments on real-world
+datasets (e.g., Montage, Cybershake) show a 55.12% cost
+reduction compared to traditional methods such as HEFT,
+ACO, and SDQN. This approach increases efficiency,
+adaptability, and scalability for intelligent cloud resource
+management in dynamic environments.
+III. MATHEMATICAL MODELING AND SYSTEM
+ARCHITECTURE
+A task scheduling and management system for Internet of
+Things (IoT) scenarios, in which an enormous number of
+tasks are being generated with each interconnected device
+shown in Fig: 1. Effective scheduling in these changing
+environments is critical to maintaining low latency, high
+throughput, and energy-efficient execution, especially for
+real-time applications such as autonomous vehicles, smart
+healthcare, and industrial automation. The system pre-
+sented here intelligently manages tasks by classifying them
+according to key parameters such as priority, computational
+complexity, and deadlines. High-priority tasks, for example,
+emergency response or security notifications, are handled
+immediately to minimize latency, and low-priority tasks are
+scheduled according to resource availability to achieve the
+best trade-off between performance and energy consumption.
+In the fog computing layer, strategically placed fog nodes
+act as intermediaries between IoT devices and the cloud,
+providing localized processing capacity to reduce reliance on
+centralized infrastructure.
+By processing close to the source, the system significantly
+reduces network traffic, reduces bandwidth usage, and
+improves response times, making it highly suitable for
+applications that require real-time decision-making. The
+FLDQN-based scheduler dynamically allocates computing
+resources by considering task dependencies, system uti-
+lization, network characteristics, and power constraints.
+This intelligent decision-making approach ensures that
+system resources are optimally utilized while ensuring SLA
+compliance. The scheduling algorithm combines heuristic,
+meta-heuristic, and deep reinforcement learning techniques
+to ensure efficient distribution of workloads across fog nodes.
+Federated Deep Q-Networks (FLDQN), the framework
+continuously learns from system behavior and optimizes
+its scheduling policies, making it highly responsive to
+changing workloads. This responsiveness is particularly
+important in mission-critical applications such as smart
+grids, real-time surveillance, and industrial IoT, where delays
+in implementation can lead to catastrophic operational
+consequences. By effectively scheduling tasks, minimizing
+makespan, energy consumption, and increasing overall
+system reliability, the proposed framework is a scalable,
+smart, and energy-efficient approach to next-generation fog
+computing ecosystems.
+A. TASK PRIORITY
+Task scheduling in fog computing environment is critical in
+establishing an efficient resource utilization and satisfaction
+of the service level agreement. K-Means clustering is an
+efficient way to rank tasks, where it categorizes incoming
+tasks into different priority levels based on their charac-
+teristics such as execution time and deadline. Fog nodes
+can effectively allocate resources with the grouping of tasks
+into priority groups, reduce task rejection rates, and reduce
+SLA violations. Fog nodes host many VMs and execute
+large tasks under constrained resources simultaneously. Tasks
+having short deadlines with long execution time need to be
+prioritized, thus avoiding any violation of the SLA. In K-
+Means algorithm, automation in task-priority categorization
+allows the completion of those high-priority tasks that
+fall within the class for which the highest capacity VM’s
+have been designed and for tasks which have relatively
+lower priority postpone them or simply reject them to limit
+resources as per necessity.
+The K parameter of the K-means clustering algorithm is
+an important parameter that directly affects task scheduling
+and prioritization. In our research, from the empirical test
+of system performance at different workload levels, K is
+manually assigned instead of being dynamically controlled.
+From the experiment, we conclude that K = 3 (corresponding
+to high, medium, and low priority tasks) gives the best
+tradeoff between computational efficiency and scheduling
+efficiency. K-Means clustering in this context operates by
+partitioning tasks into clusters based on two essential features
+execution time and deadline.
+Ti = [xi, yi]
+(1)
+The execution time (xi) of a task represents the amount of
+computational resource it requires, while the deadline (yi)
+represents the time by which the task must be completed
+to meet SLA requirements. The task Ti can be represented
+as a vector in a two-dimensional feature space. Each task
+is therefore characterized by these two primary features,
+making it a natural candidate for K-Means clustering, which
+seeks to minimize the variance within each cluster based on
+these features.
+VOLUME 13, 2025
+75473
+P. Choppara, S. S. Mangalampalli: Adaptive Task Scheduling in Fog Computing Using Federated DQN
+TABLE 1. Existing work for task scheduling in fog computing.
+The goal of K-Means clustering is to partition a set of N
+tasks into K distinct clusters, C = {C1, C2, . . . , CK}, such
+that the intra-cluster variance is minimized. The quality of
+the clustering is evaluated using an objective function that
+quantifies the sum of squared distances between each task
+and its assigned cluster centroid. The objective function to
+minimize is
+J =
+K
+X
+k=1
+X
+Ti∈Ck
+∥Ti −µk∥2
+(2)
+where Ti is the feature vector of task i and µk is the centroid
+of cluster Ck, representing the average position of all tasks in
+that cluster. The centroid µk is computed as
+µk =
+1
+|Ck|
+X
+Ti∈Ck
+Ti
+(3)
+The algorithm assigns each task to the nearest cluster
+centroid based on the Euclidean distance, and iteratively
+adjusts the centroids until convergence.
+75474
+VOLUME 13, 2025
+P. Choppara, S. S. Mangalampalli: Adaptive Task Scheduling in Fog Computing Using Federated DQN
+FIGURE 1. System architecture.
+After completing the clustering process, each task is
+assigned a priority based on the cluster it belongs to.
+The priority of the task is determined by the average
+execution time and deadline of the tasks within the cluster.
+Mathematically, the average execution time ek and the
+average deadline dk of a cluster Ck are given by
+ek =
+1
+|Ck|
+X
+Ti∈Ck
+xi
+(4)
+dk =
+1
+|Ck|
+X
+Ti∈Ck
+yi
+(5)
+Here, ek represents the mean execution time of the tasks
+in cluster Ck, and dk represents the mean deadline. Based
+on these two attributes, tasks in clusters with the highest
+execution time and shortest deadlines are assigned high
+priority, as they are more likely to violate their SLAs if not
+processed immediately. Conversely, tasks in clusters with
+longer deadlines and shorter execution times are assigned
+low priority, as these tasks can afford to be deferred without
+negatively affecting the system. The tasks in the intermediate
+cluster are classified as medium priority.
+Let p(Ti) denote the priority of task Ti. For a cluster Ck, the
+priority assignment is as follows
+If ek is high and dk is low, then tasks in
+Ck are assigned high priority (p(Ti) = High).
+(6)
+If ek is low and dk is high, then tasks in
+Ck are assigned low priority (p(Ti) = Low).
+(7)
+If ek is moderate and
+dk is also moderate tasks are assigned medium priority
+(p(Ti) = Medium).
+(8)
+This prioritization ensures that tasks with critical deadlines
+are executed first, thereby reducing the likelihood of SLA
+violations. The following function encapsulates this priori-
+tization strategy:
+p(Ti) =
+
+
+
+High,
+if ek is high and dk is low,
+Low,
+if ek is low and dk is high,
+Medium,
+otherwise.
+(9)
+The use of K-means clustering for task prioritization allows
+fog nodes to dynamically adjust their task handling strate-
+gies according to current system conditions and resource
+availability. This approach to fog computing facilitates
+scalability and malleability while allowing the mechanism to
+autonomously redirect tasks upon receiving them, prioritizing
+the accomplishment of high priority tasks. For this reason,
+K-means clustering is efficiently used for resource provision
+as it distributes tasks based on priority and lowers the delay
+occasioned by secondary tasks. As the tasks set evolves,
+and new tasks with different characteristics are generated,
+K-means adapts continually to ensure high-priority tasks are
+processed without any delay. The K-Means Clustering helps
+optimize the energy consumption as well as the resource
+utilization of the fog computing systems. It achieves this by
+minimizing task migrations as well as task reassignments
+and thus ensuring the resources are utilized in a way that
+minimizes system overhead to improve energy efficiency.
+This prevents VMs from being overloaded with high-priority
+tasks and being used by others. The clustering process
+provides an automated, data-driven task prioritization method
+that ensures SLA compliance and optimizes overall system
+performance.
+B. TASK SCHEDULING METHOD
+The critical role of task scheduling is in the efficient use of
+resources as dictated by performance expectations described
+in SLAs. Once tasks are classified and prioritized using
+techniques such as K-means clustering, the next critical step
+is the selection of these tasks to be executed on fog nodes
+and virtual machines (VMs). The scheduling process has
+been designed for optimizing performance metrics, which
+VOLUME 13, 2025
+75475
+P. Choppara, S. S. Mangalampalli: Adaptive Task Scheduling in Fog Computing Using Federated DQN
+Algorithm 1 Task Prioritization using K-Means Clustering
+1:
+T = [T1, T2, . . . , TN] (tasks, each task Ti is a vector
+[execution_time, deadline])
+2:
+K (number of clusters, i.e., priority levels)
+3:
+Max_iterations
+4:
+Convergence_threshold
+(threshold for centroid shift to stop iteration)
+5:
+Randomly initialize centroids C = [C1, C2, . . . , CK]
+chosen from tasks in T
+6:
+Initialize
+previous
+centroids
+Cprev
+=
+[C1, C2, . . . , CK]
+7: for iteration = 1 to Max_iterations do
+8:
+for each task Ti in T do
+9:
+Calculate the Euclidean distance between Ti and
+each centroid Ck
+10:
+Assign Ti to the cluster with the closest centroid:
+11:
+Cluster[Ti] = arg mink=1...K ∥Ti −Ck∥
+12:
+end for
+13:
+for each cluster Ck do
+14:
+Update centroid Ck as the mean of all tasks in
+Cluster[Ck]
+15:
+end for
+16:
+if
+max
+ ∥Ck −Cprev∥
+
+< Convergence_threshold
+for all clusters Ck then
+17:
+Break
+18:
+end if
+19:
+Update previous centroids Cprev = C
+20: end for
+21: for each task Ti do
+22:
+Calculate average execution time ek and deadline dk
+for each cluster Ck
+23:
+Assign priority based on the centroid properties:
+24:
+if ek is high and dk is low then
+25:
+priority(Ti) = High
+26:
+else if ek is low and dk is high then
+27:
+priority(Ti) = Low
+28:
+else
+29:
+priority(Ti) = Medium
+30:
+end if
+31: end for
+involve SLA violation rate, makespan, throughput, energy
+consumption, job rejection rate, and resource utilization.
+This set of metrics determines the overall effectiveness of a
+scheduling strategy in real time, as well as its effect on system
+capacity. The tasks are prioritized as high, medium, and low,
+depending on the execution time and deadline of these tasks
+by considering the available resources on fog nodes and VMs
+through K-means clustering. Fog node resource assignment
+prioritizes process tasks based on priority, ensuring that
+high priority tasks are assigned to available fog nodes first.
+This is critical because high-priority tasks have shorter
+deadlines and longer execution times, which can lead to SLA
+violations if they are delayed. These tasks are scheduled to
+run immediately on nodes that have sufficient resources. The
+available processing time on each fog node can be expressed
+mathematically as:
+Available Time(Fj) ≥Exec Time(Ti)
+(10)
+where Available Time(Fj) denotes the remaining time on fog
+node Fj, and Exec Time(Ti) is the execution time of task Ti.
+If a task requires more resources than a node can provide,
+it may be scheduled on another node with adequate capacity,
+or it could be rejected if no sufficient resources are available.
+After tasks are allocated to fog nodes, the main goal
+is to minimize the overall makespan, which is the total
+time required for completing all tasks. The makespan is
+an important metric because it reflects how efficiently the
+tasks are completed within the system’s available time. The
+makespan calculation can be represented as:
+Makespan = max(Completion Time(T1),
+. . . , Completion Time(TN))
+−min(Start Time(T1), . . . , Start Time(TN))
+(11)
+where N is the total number of tasks. A lower makespan
+means the tasks are completed more efficiently, and that
+directly contributes to system throughput. Another perfor-
+mance indicator is throughput, defined as the number of tasks
+completed per unit of time. The makespan can be used to
+compute the total number of tasks divided by:
+Throughput =
+N
+Makespan
+(12)
+A higher throughput implies better resource utilization and
+efficient task execution. SLA violations in fog computing
+are a critical issue because they reflect that a task has not
+completed within its stipulated deadline, which may lead to
+penalties or degradation of system performance. The task
+scheduling algorithm aims to reduce SLA violations by
+prioritizing tasks based on their deadlines and ensuring that
+tasks are completed on time. The violation rate of the SLA is
+calculated by counting the number of tasks whose completion
+times exceed their deadlines. The violation rate of the SLA is
+given as:
+RSLA = 1
+N
+N
+X
+i=1
+I(Completion Time(Ti) > Deadline(Ti))
+(13)
+where I is an indicator function that returns 1 if a task
+violates the SLA and 0 otherwise. This metric is important
+in order to assess the reliability of the system to respect
+the deadlines of tasks and maintain the quality of service
+overall. Energy consumption is another significant parameter
+in fog computing systems, since resources are spread across
+various nodes of the fog. Energy Consumed by fog nodes
+depends upon the execution time of tasks, as well as the
+power consumption rate of the respective node. It should be
+allocated to the appropriate fog nodes by tasks that consume
+75476
+VOLUME 13, 2025
+P. Choppara, S. S. Mangalampalli: Adaptive Task Scheduling in Fog Computing Using Federated DQN
+minimum energy considering both execution time and power
+consumption. The Energy consumed by the fog node Fj:
+Ej =
+Nj
+X
+i=1
+(Pj × Exec Time(Ti))
+(14)
+where Pj is the energy consumption of fog node Fj, and Nj is
+the number of tasks assigned to the fog node. The total energy
+consumption across all fog nodes is the sum of the energy
+used by each node:
+Etotal =
+M
+X
+j=1
+Ej
+(15)
+where M represents the total number of fog nodes in the
+system. Minimization of energy usage ensures sustainability,
+and it lowers the cost incurred during operations. Task
+rejection rate is another measure of performance where there
+are less resources available for the execution of a task. In this
+situation, tasks get queued for execution at a later time or
+even get rejected totally if no such feasible resources exist.
+The task rejection rate is determined by counting the number
+of tasks that could not be scheduled. The rejection indicator
+function is used to identify tasks that cannot be scheduled
+because of resource limitations: I(Available Time(Fj)
+<
+Exec Time(Ti)). The rejection rate is given by:
+Rreject = 1
+N
+N
+X
+i=1
+I(Available Time(Fj) < Exec Time(Ti))
+(16)
+This is essential to measure the frequency at which tasks
+could not be accepted and completed due to resource unavail-
+ability. Higher values of rejections indicate improper use of
+resources leading to potential inefficiency and inconsistency
+in the general performance of the system. In addition,
+it is vital that resource utilization helps in preventing tasks
+from underutilizing or overloading fog nodes. Maximum
+throughput and least probable task rejection may be obtained
+due to optimal use of resources in task scheduling. The
+resource utilization of the fog node Fj is as follows:
+Resource Utilization(Fj) =
+PNj
+i=1 Exec Time(Ti)
+Total Available Time(Fj) (17)
+where, Nj is the number of jobs assigned to the fog node
+Fj and Total Available Time(Fj) is the total processing time
+that would be available to that node. Hence a high resource
+utilization rate indicates that the node is highly utilized,
+thereby optimizing system performance.
+IV. PROPOSED TASK SCHEDULING USING FEDERATED
+DQN
+Task scheduling in the distributed fog environment is critical
+in optimizing resource allocation, which lowers latency
+and will result in a smooth operation of complex systems.
+Considering the edge devices are sending tens of thousands
+of tasks to the incoming cloud, smart adaptive and efficient
+mechanisms of scheduling are mandatory. Unlike traditional
+cloud environments, fog environments bring decentraliza-
+tion and diverse resource pools, which, in turn, introduce
+proximity near the edge, thus favoring low latency but
+necessitating more dynamic resource management in order to
+avoid bottlenecks while maximizing throughput. Therefore,
+it is hard to allocate the computational tasks for virtual
+machines such that the performance of the system, energy
+efficiency, and SLA are all satisfied. The ultimate aim is to
+handle tasks as quickly as possible without wasting resources,
+minimizing task rejections, and avoiding SLA violations.
+Federated Deep Queue-Learning (DQN) is the revolutionary
+solution to the task scheduling challenges of distributed
+fog environments. It relies on reinforcement learning (RL)
+to introduce an intelligent, self-optimizing approach that
+spreads learning across individual fog nodes. Each node
+runs in a local DQN agent constantly learning the policy
+of optimal assignment of tasks locally and based upon the
+localized state of the environmental conditions. Since this is
+what makes localized learning possible, localized learning
+allows node operation with highly autonomous behavior
+compared to centralized ones. Decentralization is found to be
+essential in large scale fog networks so that system scalability
+increased and communication overhead reduced, along with
+latency-related delays and poor synchronization.
+A. FLDQN FRAMEWORK
+The FLDQN system architecture Fig:2 is based on optimizing
+the scheduling of tasks in fog computing environments
+using deep reinforcement learning and federated learning
+principles. It starts from a representation of system states,
+which captures real-time information about fog nodes,
+including task queue lengths and resource availability. Once
+a task scheduling decision is made, it moves to the next
+state according to the updated conditions. The actions in
+this architecture correspond to selecting specific virtual
+machines (VMs) or resources for task execution. The impact
+of these decisions is assessed through a reward mechanism.
+To improve decision-making, a replay memory buffer is used
+to store past experiences that include states, actions, rewards,
+and next states. These learned experiences are used to train
+a deep reinforcement learning model. It is also known as a
+Q-network. It estimates action-value functions, such as Q-
+values, to nudge the system toward optimal task allocation.
+Then, a global model is built by integrating the models trained
+from individual fog nodes on a federated learning server. This
+global model, which captures the collective knowledge from
+all nodes, is distributed back to the fog nodes while preserving
+privacy and optimizing performance.
+Deep Q-Networks (DQN) have emerged as a powerful
+tool for solving complex reinforcement learning problems,
+particularly in areas like task scheduling in cloud and
+fog computing environments. Task scheduling is a critical
+challenge in these environments, where resources must
+be allocated efficiently to meet stringent Service Level
+VOLUME 13, 2025
+75477
+P. Choppara, S. S. Mangalampalli: Adaptive Task Scheduling in Fog Computing Using Federated DQN
+FIGURE 2. Federated DQN framework.
+Agreements (SLAs) and ensure optimal performance. In this
+context, DQN leverages the Q-learning algorithm to estimate
+the optimal action-value function Q(s, a), which predicts the
+expected reward of selecting action a in state s. For task
+scheduling, the states s could represent the system’s current
+resource usage, network conditions, and the status of the tasks
+to be scheduled, while the actions a might correspond to the
+assignment of tasks to specific cloud or fog nodes.
+The Q-value is updated using the Bellman equation, which
+provides a way of balancing immediate rewards with the
+expected future rewards. For task scheduling, this could
+involve balancing the benefits of minimizing task completion
+time with the need to avoid SLA violations, minimize energy
+consumption, or reduce task rejection rates. The update rule
+for the Q-values is:
+Q(s, a) ←Q(s, a) + α
+
+r + γ max
+a′ Q(s′, a′) −Q(s, a)
+
+(18)
+Here, α is the learning rate, γ is the discount factor that
+controls how much future rewards are considered, and r is
+the immediate reward received after performing the action
+a. In the case of task scheduling, the reward r could reflect
+the improvement in SLA adherence, throughput, or energy
+efficiency after assigning a task to a particular resource. The
+new state s′ represents the updated system configuration after
+the task assignment.
+In DQN, the Q-value function is approximated by a neural
+network Q(s, a; θ), where θ represents the weights of the
+neural network. This neural network allows DQN to handle
+complex state and action spaces, such as those encountered
+in task scheduling, where the number of possible resource
+allocations grows rapidly. The training process involves
+minimizing a loss function that measures the difference
+between the predicted Q-values and the target Q-values. The
+target is calculated using the Bellman equation, with the target
+network θ−providing a stable reference for updates:
+L(θ) = E(s,a,r,s′)∼D
+h
+(y −Q(s, a; θ))2i
+(19)
+where y = r+γ maxa′ Q(s′, a′; θ−) is the target Q-value. The
+target network is periodically updated to avoid instability in
+training, which might be caused by the frequent update of
+the Q-network. Scheduling tasks in cloud and fog computing
+is typically characterized by a set of conflicting objectives
+such as minimizing the rate of task rejections, maintaining
+low makespan (the total time to complete all tasks), reducing
+energy consumption, and ensuring compliance with SLA.
+DQN helps mitigate some of these challenges by learning a
+policy that can balance these objectives dynamically. In other
+words, reward function r may penalize the agent for SLA
+violations and too much energy usage and reward it for
+minimizing the makespan and increasing throughput. The
+agent improves its decision-making skills to optimize metrics
+over time, as the Q-values update based on the actions taken.
+Experience replay is another technique employed in DQN
+that helps stabilize learning by breaking the correlation
+between consecutive training samples. In task scheduling,
+experience replay stores previous scheduling decisions along
+with their outcomes (e.g., SLA violations, energy consump-
+tion, etc.) in a replay buffer. The model can then sample from
+this buffer to train the neural network, reducing the variance
+in updates and improving the learning process. In addition,
+prioritized experience replay can be used, where experiences
+that lead to large changes in the Q-values are given higher
+priority during training, enabling the model to focus on the
+most informative experiences.
+B. FEDERATED LEARNING FOR DQN
+Federated learning for DQN improves task scheduling in
+distributed environments such as fog computing by allowing
+each fog node i to independently train its local deep queue-
+network (DQN) model on the tasks processed at that node
+Fig:3. Each fog node i trains its local DQN model, Qi(s, a; θi),
+which estimates an action-value function based on its local
+state s and action a. Over several episodes, the model learns
+to make task scheduling decisions that optimize various
+objectives, such as minimizing SLA violations or energy
+consumption, based on the tasks assigned to the node. After
+local training is complete, the local model weights from each
+fog node form a global model θi, which improves the overall
+task scheduling approach for the entire network.
+The aggregation process can be done using a simple
+averaging technique:
+θglobal = 1
+N
+N
+X
+i=1
+θi
+(20)
+Here N is the number of fog nodes participating in the
+aggregation. This aggregation process ensures that collective
+75478
+VOLUME 13, 2025
+P. Choppara, S. S. Mangalampalli: Adaptive Task Scheduling in Fog Computing Using Federated DQN
+FIGURE 3. Federated learning for DQN.
+knowledge is shared from all nodes without revealing raw
+data, maintaining confidentiality, and reducing the need for
+data transmission. The global model can be viewed as the
+collective experience and learning of all the participating
+nodes. That way, it is able to make nodes synchronize
+their policies across the whole fog network to enhance
+decisions for task scheduling. Alternatively, one can apply
+the weighted aggregation technique, taking into consideration
+the workload of each node involved in the process. Here, the
+aggregation would be weighted with the number of ni tasks
+handled by each node:
+θglobal =
+PN
+i=1 niθi
+PN
+j=1 nj
+(21)
+where ni represents the number of tasks processed by node i.
+This weighted aggregation approach gives more importance
+to models from the fog nodes processing more tasks, as they
+are contributing more to the overall performance of the
+system. The global model can thus adapt better to the
+scheduling requirements of more demanding nodes by giving
+more weight to nodes that handle higher workloads.
+Federated DQN significantly improves the efficiency and
+scalability of task scheduling in distributed systems. It allows
+for the possibility of distributed training across fog nodes,
+thereby improving the scheduling process without having to
+collect centralized data, which is critical in privacy-sensitive
+environments. DQN-based federated learning can effectively
+and dynamically adapt to various tasks as well as networks
+with the aggregate intelligence of all the nodes and then
+optimize decisions in scheduling according to the changing
+requirements. Each node only contributes the model weight
+rather than uploading the raw data; therefore, this system,
+based on privacy concerns, retains its data yet achieves
+collaborative learning. This approach is quite effective in
+decentralized computing environments where each node
+might have different capabilities for processing tasks and
+distribution of workload.
+Algorithm 2 Federated Learning Task Scheduling in Fog
+Computing
+1: Initialize parameters:
+2:
+NUM_NODES ←Number of fog nodes
+3:
+NUM_VMS_PER_NODE ←Number of VMs per
+node
+4:
+GAMMA ←Discount factor for DQN
+5:
+EPSILON ←Exploration factor for DQN
+6:
+EPSILON_MIN ←Minimum epsilon value for explo-
+ration
+7:
+EPSILON_DECAY ←Decay rate for epsilon
+8:
+MEMORY_SIZE ←Size of experience replay buffer
+9:
+BATCH_SIZE ←Number of experiences per training
+batch
+10:
+TARGET_UPDATE_FREQ ←Frequency to update
+target model weights
+11: Initialize federated environment:
+12:
+Create fog nodes, each with VMs running DQN models
+13: for episode = 1 to EPISODES do
+14:
+Initialize job assignments for the episode
+15:
+for each task in task list do
+16:
+for each fog node do
+17:
+Get the best VM for the task using its DQN
+model
+18:
+if VM capacity is available then
+19:
+Assign task to VM
+20:
+Execute task using SimPy
+21:
+Update task metrics (e.g., energy con-
+sumption, SLA violations)
+22:
+Collect experience (state, action, reward,
+next_state) for training
+23:
+Store experience in replay buffer of
+corresponding VM’s DQN model
+24:
+else
+25:
+Reject the task
+26:
+Increment rejection counter
+27:
+end if
+28:
+end for
+29:
+end for
+30:
+Perform Federated Learning step:
+31:
+for each fog node do
+32:
+Aggregate weights of all VMs in the fog node
+33:
+end for
+34:
+Aggregate weights across all fog nodes:
+35:
+Collect aggregated weights from each fog node
+36:
+Average the weights from all nodes
+37:
+for each fog node do
+38:
+Update models of all VMs with the aggregated
+weights
+39:
+end for
+40:
+Update DQN models:
+41:
+for each VM in each fog node do
+42:
+Train DQN using experiences from the replay
+buffer
+43:
+Update
+target
+model
+every
+TARGET_UPDATE_FREQ steps
+44:
+end for
+45: end for
+VOLUME 13, 2025
+75479
+P. Choppara, S. S. Mangalampalli: Adaptive Task Scheduling in Fog Computing Using Federated DQN
+C. STATE
+In Federated Deep Queue-Networks (FLDQN) for task
+scheduling, state representation plays a key role in making
+informed decisions based on local conditions at each fog node
+while contributing to the global learning process. The state
+vector s captures key information about the environment,
+including the number of virtual machines (VMs), tasks to
+be scheduled, and resource utilization at each fog node. This
+representation allows the agent to assess the current system
+state and make decisions that lead to optimal task allocation
+and efficient resource management.
+The state vector s consists of several components. The
+first component, s1, is the current queue length of each VM.
+It indicates how many tasks are waiting to be processed at
+that node. The queue length is an important factor because
+it helps the agent evaluate whether the VM is overloaded or
+underutilized. It is defined as:
+s1 = queue length of VMi
+(22)
+The next feature is the CPU requirement of each task,
+denoted by s2. This feature captures the computational
+demand for executing a task. It enables the agent to determine
+whether the available VMs have enough computational
+resources to handle the task efficiently. The CPU requirement
+can be expressed as:
+s2 = CPU requirement of taskj
+(23)
+The second important component of the state vector is task
+priority, denoted by s3. Task priority denotes the urgency
+associated with each task and helps the agent prioritize tasks
+based on their higher priority over other tasks. This is encoded
+by a numerical value: 0 for low, 1 for medium, and 2 for high.
+It can be depicted as:
+s3 =
+
+
+
+0
+if task is of low priority
+1
+if task is of medium priority
+2
+if task is of high priority
+(24)
+In FLDQN, the state vector s is computed locally at each
+fog node and serves to evaluate the present conditions of the
+system. The state vector enables the agent to take decisions
+based on the local status of the VMs of the fog node,
+requirements of the task, and their priorities. When the task
+is assigned to the VM, the environment moves into a new
+state s′, which captures the updated system conditions. The
+complete state representation s is the composition of these
+and is defined by:
+s = [s1, s2, s3]
+(25)
+Let s1 be the length of the VM queue, s2 be the CPU
+requirement of the task, and s3 be the priority of the task.
+Using this state vector, each fog node makes task scheduling
+decisions in a way that balances system performance and
+resource usage. Furthermore, through federated learning,
+these local states and actions contribute to the improvement
+of the global scheduling model, which can be shared among
+all participating nodes, thereby improving the overall task
+allocation process.
+D. ACTION
+In Federated Deep Queue-Networks (FLDQN) for task
+scheduling, the set of possible actions an agent may take in
+any given step at the time of a decision point is presented
+by the action space A. Here an action would define selecting
+a fog node virtual machine on which some task needs to be
+assigned so as to run on that selected node. The action space
+is dynamic as it depends on the number of VMs available
+in the system, and the agent must select the optimal VM
+based on the current state of the system, which includes
+task requirements, VM queue lengths, and task priorities.
+The agent evaluates the VMs available in the system at each
+step and selects the one that maximizes the expected future
+reward. Q-values are used for action selection and represent
+the long-term reward associated with taking a particular
+action in a state. The VM chosen by the agent is that action
+a∗having the highest Q-value for the current state s:
+a∗= arg max
+a
+Q(s, a)
+(26)
+where a∗is the action selected, which corresponds to the VM
+chosen for task assignment. Q(s, a) is the Q-value function
+that estimates the expected future reward for taking action a
+in state s. Once an action a∗is selected, the task is assigned to
+the selected VM and the system transitions to a new state s′
+that reflects the updated system conditions, such as VM queue
+lengths, resource utilization, and task completion statuses.
+The agent receives a reward based on the effectiveness of the
+action in meeting task scheduling goals (e.g., task completion
+time, SLA violations, energy consumption, or throughput).
+In FLDQN, this action selection process is performed
+locally at each fog node, where the node’s local DQN model
+predicts possible actions based on the local state. However,
+the agent’s decisions and Q-values are aggregated over time
+with other fog nodes to improve the global model, allowing
+the entire system to benefit from shared knowledge and
+collectively optimize the task scheduling strategy.
+The action space A can be expressed as the set of all
+available VMs in the system:
+A = {VM1, VM2, . . . , VMN}
+(27)
+where N represents the total number of VMs available for
+task assignment. In this case, the agent must choose the
+appropriate VM based on its workload and priority of the
+task, while simultaneously learning from experiences of other
+nodes in the federated learning scheme. The selecting actions
+that maximize expected Q-values, the FLDQN agent aims
+to optimize resource utilization, reduce task rejection rates,
+and ensure that tasks in the fog network meet their respective
+deadlines and performance goals.
+E. REWARD
+The reward function in Federated Deep Queue-Networks
+(FLDQN) is designed to guide the decision-making agent in
+75480
+VOLUME 13, 2025
+P. Choppara, S. S. Mangalampalli: Adaptive Task Scheduling in Fog Computing Using Federated DQN
+selecting actions that optimize task execution while balancing
+multiple key performance metrics, namely SLA compliance,
+task throughput, and energy efficiency. The objective is to
+allocate tasks efficiently to the available virtual machines
+(VMs) in a way that minimizes energy consumption while
+ensuring performance. The reward function r is structured as
+follows
+r =
+
+
+
++10,
+if task Ti is completed within its SLA deadline
+−5,
+if task Ti violates its SLA deadline
+−10,
+if task Ti is rejected due to resource constraints
+(28)
+Here, r represents the immediate reward assigned to the
+agent’s action, and Ti denotes an individual task. A positive
+reward of +10 is granted for completing a task within its SLA
+deadline, encouraging timely execution. If a task exceeds its
+deadline, a penalty of −5 is applied to discourage delays.
+A stronger penalty of −10 is imposed when a task is rejected
+due to insufficient resources, pushing the agent to optimize
+task allocation and prevent unnecessary rejections. While
+SLA compliance is a critical objective, energy consumption
+plays a crucial role in the efficiency of distributed fog
+computing systems. The total energy consumption E for
+executing a set of tasks is defined as
+E =
+N
+X
+i=1
+(ti · Pi)
+(29)
+where N is the total number of VMs, ti represents the
+execution time of the task assigned to VM i, Pi denotes the
+power consumption rate of VM i. To ensure energy-aware
+scheduling, the reward function is extended by incorporating
+an additional penalty term proportional to E. This modi-
+fication encourages the agent to prioritize energy-efficient
+scheduling decisions, reducing excessive power consumption
+while maintaining high performance. The agent is thus
+incentivized to assign tasks to VMs with lower power
+consumption rates or faster execution capabilities, leading to
+an overall reduction in system-wide energy expenditure.
+F. HYPER PARAMETER
+The network architecture consists of an input layer, hidden
+layers and output layers. The input layer is responsi-
+ble for encoding system states to fully understand the
+model workload conditions. The hidden layers consist of
+two fully connected layers with 128 and 64 neurons,
+respectively, applying the Rectified Linear Unit (ReLU)
+activation function to improve learning efficiency and avoid
+vanishing gradient problems. The output layer generates
+Q-values for various scheduling actions, using a Softmax
+activation function for probabilistic selection of actions.
+FLDQN architecture supports its ability to iteratively learn
+its scheduling approach, optimizing makespan, energy effi-
+ciency, and system throughput as it dynamically adapts
+to workload fluctuations. FLDQN success is fueled by a
+well-calibrated set of hyperparameters that stabilize learning
+and sharpen decision-making accuracy. The learning rate,
+α
+= 0.001, facilitates smooth but sensitive adjustments
+to new scheduling contexts, avoiding wild oscillations in
+Q-value updates. The discount factor, γ = 0.95, balances
+short-term efficiency and long-term scheduling effectiveness,
+ensuring task assignments maximize immediate rewards
+while contributing to overall system stability. To ensure
+efficient training and computational efficiency, a batch size
+of 32 is used, allowing the model to learn from its parameters
+based on a representative sample of previous experiences.
+FLDQN also employs an ϵ-gradient search mechanism,
+where ϵ starts at 1.0 and gradually decreases, enabling the
+model to explore various scheduling options before settling
+on the optimal policy.
+Algorithm 3 Federated DQN Training Process
+1: Initialize
+global
+parameters:
+NUM_NODES,
+NUM_VMS_PER_NODE,
+GAMMA,
+EPSILON,
+EPSILON_MIN,
+EPSILON_DECAY,
+BATCH_SIZE,
+TARGET_UPDATE_FREQ,
+MEMORY_SIZE, EPISODES.
+2: Initialize fog nodes, VMs, and replay buffers.
+3: for each episode in EPISODES do
+4:
+for each fog node do
+5:
+for each VM do
+6:
+state = get_current_state(vm)
+7:
+for each step in simulation do
+8:
+action = ϵ-greedy(Q(state))
+9:
+next_state, reward = execute_action(vm,
+action)
+10:
+store_experience(vm.replay_buffer, state,
+action, reward, next_state)
+11:
+batch
+=
+sam-
+ple_experience(vm.replay_buffer,
+BATCH_SIZE)
+12:
+for each experience in batch do
+13:
+update Q-values using target function
+14:
+end for
+15:
+train DQN model
+16:
+end for
+17:
+Decay ϵ
+18:
+end for
+19:
+Aggregate weights and update models across
+VMs
+20:
+end for
+21: end for
+V. EXPERIMENTAL RESULTS
+This section shown the experimental outcomes obtained
+the simulation of the proposed FLDQN based scheduling
+framework. The simulation setup datasets and evaluation
+metrics are described after the analysis of the framework
+performance in comparison with the baseline algorithms. The
+simulation environment to test the proposed FLDQN based
+framework under different workload conditions. The tasks
+VOLUME 13, 2025
+75481
+P. Choppara, S. S. Mangalampalli: Adaptive Task Scheduling in Fog Computing Using Federated DQN
+TABLE 2. Simulation parameters.
+used datasets from Google Cloud Jobs [38], which were
+classified into three groups of small, medium, and large based
+on task complexity and computational requirements. Each
+dataset represents a range of task lengths and priority levels
+to simulate real-world fog. The simulated fog nodes represent
+the environment with different capacities ranging from CPU
+and memory capacity to bandwidth. All the simulation work
+done by Simpy is a Python-based tool. The experimental
+evaluation covered multiple critical aspects of task scheduling
+in a fog nodes. It enabled event-driven scheduling, where
+tasks arrived dynamically and were allocated based on system
+conditions. The simulation included N fog nodes, each
+with multiple Virtual Machines (VMs) that had predefined
+CPU, memory, and bandwidth capacities. Each task was
+assigned a priority level using K-Means clustering, along
+with execution time and deadline constraints. Task execution
+time depended on the VM’s processing power and resource
+availability, ensuring realistic workload distribution. SimPy
+managed task queues at each fog node, prioritizing execution
+based on urgency. SLA violations were tracked when tasks
+exceeded their deadlines. Network latency was simulated
+with a delay ranging from Y ms to Z ms, reflecting real-world
+communication overhead. The proposed framework was able
+to dynamically assign tasks to virtual machines and optimize
+resource utilization while minimizing overhead. The results
+also highlighted the adaptability of the FLDQN framework
+to changing task demands and resource availability. It bench-
+marks its performance against established algorithms and
+compares the improvements in scheduling efficiency.These
+analyses showed the superiority of the FLDQN framework
+for handling high-priority tasks with complex dependencies
+and minimal the metrics.
+1) COMPUTATIONAL OVERHEAD OF FLDQN
+The computational burden of FLDQN consists of two primary
+components: the cost of training Deep Q-Network (DQN)
+models at each fog node and the communication burden
+imposed by federated learning. Each fog node trains a
+local DQN model to learn task scheduling options, thereby
+improving processing loads. Our evaluation demonstrates
+that a single iteration of the DQN model requires 12.8 ms
+and 48.6 MB of memory per fog node. This translates
+to an additional 19% in computational time over the
+standalone DQN method. However, the increased complexity
+contributes to better scheduling accuracy, task rejection rates
+are reduced by 27% and SLA violations by 22%, resulting
+in better resource utilization. Federated learning imposes a
+communication overhead, in which each node periodically
+sends its model weights obtained from training to the global
+server. Each update cycle sends approximately 152 KB of
+data to the node every five scheduling periods. This increases
+network bandwidth utilization by 6.7%, yet the improved
+global decision making greatly reduces overall task latency.
+The improved task allocation yields a 30% lower makespan
+and an 18% increased throughput, which shows an overhead
+vs. performance In addition to increasing training complexity,
+FLDQN ensures real-time task scheduling efficiency by
+optimizing update rates and reducing unnecessary model
+synchronizations. The training frequency is dynamically
+adjusted to balance the computational load while keeping
+the schedulability response intact. Our research reveals that
+FLDQN achieves an average scheduling efficiency of 92.4%
+across various workload scenarios. Our results prove that
+despite the high computational and communication overhead,
+the improved task scheduling capability justifies the overhead
+as an effective solution for real-time fog computing.
+FLDQN is designed to maximize task scheduling and
+reduce overall energy consumption, it also adds additional
+energy overhead as it trains and updates DQN models on
+each fog node. To measure this, we compare the energy
+consumption of FLDQN in two ways energy used to train
+local DQN model and energy used during federated learning
+model aggregation and updates. Our findings indicate that
+each training iteration on a fog node consumes approximately
+2.3 joules, while local DQN updates are executed every five
+scheduling periods. Federated learning model aggregation
+consumes an additional 1.1 joules per update, which is mainly
+due to communication overhead. FLDQN still maintains an
+overall reduction of 17.4% compared to single DQN and
+heuristic-based scheduling methods. This is because FLDQN
+optimally distributes tasks to energy-efficient nodes, avoiding
+unnecessary task migrations and overloading high-energy
+consuming devices.
+2) GLOBAL MODEL AGGREGATION
+Federated learning involves periodic global model aggrega-
+tion, which has the potential to postpone task scheduling,
+especially in time-sensitive applications. The model update
+frequency has a direct impact on the system’s response
+to dynamic workload changes. In our FLDQN framework,
+global model aggregation occurs every five scheduling
+periods, balancing improved decision making with minimal
+impairment for real-time scheduling. Each aggregation
+period lasts for about 36.4 ms, while fog nodes continue to
+process tasks according to their latest local models. To assess
+the cost of this delay, we measured scheduling performance
+for different update intervals. Increasing the aggregation
+period to ten scheduling cycles reduced communication
+overhead by 6.2% but resulted in a 14% increase in task
+75482
+VOLUME 13, 2025
+P. Choppara, S. S. Mangalampalli: Adaptive Task Scheduling in Fog Computing Using Federated DQN
+rejection rates as a result of the old scheduling policies.
+Reducing the interval to three cycles improved response
+time by 9.8% but increased network traffic by 5.1%. These
+findings suggest that our chosen five cycle update interval
+provides the best compromise, ensuring 95.6% scheduling
+responsiveness while ensuring acceptable communication
+overheads.
+A. K-MEANS
+This section shows how tasks are grouped based on their
+execution times and deadlines to improve task scheduling
+in fog computing environments. This clustering process
+classifies tasks into three distinct groups high, medium,
+and low priority, based on their urgency and resource
+requirements. The Fig:4,5,6shows the highlights how tasks
+with similar characteristics are grouped together, which
+allows for more efficient resource allocation and priori-
+tization of critical workloads. Large-sized datasets form
+the high-priority cluster of the graph. There, tasks are
+executed for a long time, but their deadlines are very
+short. With such high requirements, these tasks are critical
+and require special attention, for example to prevent SLA
+violations consequently, the dense clustering of such tasks
+in the upper-left region is not random. The medium-priority
+cluster represents medium-sized datasets with moderate
+execution times and deadlines. Such tasks are less urgent
+and should be completed immediately without delaying their
+processing. They are generally more evenly spread across
+the graph, indicating that it is well-balanced. The last,
+lower-priority cluster contains smaller datasets, where the
+execution time of tasks is shorter and their deadlines are much
+longer. Tasks can be postponed or scheduled on less busy
+virtual machines, reducing the pressure on the system. This
+separation of clusters in the image demonstrates the dynamic
+task load management capabilities of K-Means, with optimal
+performance and resource utilization of nodes in the fog.
+B. MAKESPAN
+Makespan is one of the important metrics by which the
+capabilities of any task scheduling algorithm can be tested.
+It specifies the total time taken by all the tasks in any given
+dataset; therefore, if the makespan is kept as small as possible,
+then even in that case, resource utility can be achieved with
+better scheduling of tasks in relation to faster processing.
+Tables 3, 4, and 5 summarize the comparison of Makespan
+between small (100-350 tasks), medium (400-650 tasks) and
+large (1000 tasks) datasets. Compared to LSTM, GGCN,
+DQN, and FLDQN, FLDQN consistently outperformed the
+others for makespan minimization of all sizes.
+In the small dataset size range, from 100 to 350 tasks,
+Table 3 shows that FLDQN consistently performs best among
+all algorithms for makespan minimization. For example, at
+100 tasks, FLDQN achieves a makespan of 109.1, which
+is 13% lower than DQN (125.5), 20% lower than GGCN
+(136.4), and 38% lower than LSTM (177.2). This trend
+continues across all task sizes, with FLDQN reducing the
+FIGURE 4. Task priority (K-Means) of small datasets.
+FIGURE 5. Task Priority (K-Means) of Dataset Medium.
+makespan by up to 25% compared to other algorithms.
+At 350 tasks, FLDQN achieves a makespan of 172.5,
+significantly outperforming DQN (207.7), GGCN (225.1),
+and LSTM (295.6). This Fig:7shows the effectiveness of
+FLDQN in task scheduling and resource allocation.
+For medium-sized (400-650 tasks) datasets, FLDQN still
+performs better in makespan reduction. As shown in Table 4,
+FLDQN consistently reduces makespan better than DQN,
+VOLUME 13, 2025
+75483
+P. Choppara, S. S. Mangalampalli: Adaptive Task Scheduling in Fog Computing Using Federated DQN
+FIGURE 6. Task priority (K-Means) of dataset large.
+GGCN, and LSTM. For example, at 400 tasks, FLDQN
+achieves a makespan of 179.1, which is 20% lower than
+DQN (224.0), 26% lower than GGCN (242.7), and 44%
+lower than LSTM (318.8). Similarly, at 650 tasks, FLDQN
+reaches 242.8, outperforming DQN (309.7), GGCN (333.7),
+and LSTM (435.8). This Fig:8clearly shows that FLDQN can
+scale effectively with increasing tasks.
+As the range of tasks increases to a larger dataset (700-1000
+tasks), FLDQN remains the best, resulting in the smallest
+makespan. As seen in Table 5, the makespan achieved by
+FLDQN is 30% lower than that of DQN, GGCN, and
+LSTM. For example, when there are 700 tasks, the makeSpan
+of FLDQN is 259.0, which is 23% lower than DQN at
+337.8, 29% lower than GGCN at 364.2, and 46% lower
+than LSTM at 475.8. Similarly, at 1000 tasks, FLDQN
+reaches a makeSpan of 328.9, which is 27%, 33%, and
+49% better than DQN (453.2), GGCN (490.0), and LSTM
+(641.2), respectively. This Fig:9 shows the FLDQN was scale
+effectively with increasing the tasks
+C. ENERGY
+Energy consumption is one of the most important perfor-
+mance metrics in task scheduling and resource management,
+especially in fog and cloud computing systems, where
+TABLE 3. Makespan for tasks 100–350.
+TABLE 4. Makespan for tasks 400–650.
+TABLE 5. Makespan for tasks 700–1000.
+FIGURE 7. Makespan of 100_350 datasets.
+energy efficiency is an important factor in operational
+costs and system stability. Reducing energy consumption is
+an important factor in reducing environmental impact and
+75484
+VOLUME 13, 2025
+P. Choppara, S. S. Mangalampalli: Adaptive Task Scheduling in Fog Computing Using Federated DQN
+FIGURE 8. Makespan of 400_650 datasets.
+FIGURE 9. Makespan of 700_1000 datasets.
+ensuring appropriate use of resources. In terms of direct
+energy consumption, fog computing is closely related to
+task scheduling algorithms, as such algorithms influence task
+assignments to the right resources or affect the operational
+load on nodes in a fog environment. Optimizing task place-
+ment using efficient algorithms such as FLDQN can reduce
+energy consumption because such algorithms maintain the
+right resource load and allow resources to not be idle.
+TABLE 6. Energy for tasks 100–350.
+The energy consumption results for small (100-350 tasks),
+medium (400-650 tasks), and large (700-1000 tasks) datasets
+are 6, 7, and 8. A comparison is made with LSTM,
+GGCN, DQN, and FLDQN, where FLDQN is shown to be
+consistently lower in energy consumption for all dataset sizes.
+In the case of small dataset size (100-350 tasks), FLDQN
+consumes less energy compared to the others, as presented
+in Table 6. For example, at 100 tasks, FLDQN consumes
+80.2 units of energy, 15% less than DQN (94.5 units),
+22% less than GGCN (102.4 units), and 30% less than
+LSTM (115.8 units). This is also true for tasks of all sizes,
+up to a 35% reduction over LSTM for a task size of 350.
+In fact, FLDQN consumes only 115.7 units compared to
+LSTM with 178.4 units in the 350 task case. FLDQN
+low energy consumption is due to efficient task placement
+and load balancing was seen in Fig:10, which prevents
+resource overuse and unnecessary energy consumption. For
+medium-sized datasets (400-650 tasks), FLDQN continues to
+outperform other algorithms in terms of energy efficiency.
+As can be seen in Table 7, FLDQN consumes much less
+energy than DQN, GGCN, and LSTM. With 400 tasks,
+FLDQN consumes 162.3 units of energy, which is 18%
+less than DQN at 198.0 units, 22% less than GGCN at
+208.5 units, and 29% less than LSTM at 229.8 units.
+Similarly, at 650 tasks, FLDQN consumed 258.7 units
+of energy, outperforming DQN at 314.6 units, GGCN at
+337.2 units, and LSTM at 385.1 units by 18%, 23%, and 33%,
+respectively. Efficient use of resources in FLDQN ensures
+that best possible energy consumption shown in 11 without
+affecting task completion times and system performance.
+FLDQN maintains its excellent energy efficiency on large
+datasets of 700-1000 tasks, as illustrated in Table 8. For
+example, FLDQN consumes 312.7 units of energy, which
+is 20% less than DQN (392.5 units), 23% less than GGCN
+(405.3 units), and 32% less than LSTM (459.8 units) for
+700 tasks. In fashion, FLDQN consumes 398.9 units of
+energy at 1000 tasks it outperforms DQN, GGCN, and
+LSTM by 16%, 18%, and 25%, with 475.2, 485.6, and
+533.3 units, shown in Fig:12respectively. This means that
+FLDQN consumes less energy because it can dynamically
+assign tasks to less loaded nodes so that resources are not
+overloaded, thereby saving energy.
+D. SLA
+SLA violations are instances where tasks fail to meet their
+predefined service-level objectives; for example, completion
+within a specified time frame or completion with a required
+VOLUME 13, 2025
+75485
+P. Choppara, S. S. Mangalampalli: Adaptive Task Scheduling in Fog Computing Using Federated DQN
+TABLE 7. Energy for tasks 400–650.
+TABLE 8. Energy for tasks 700–1000.
+FIGURE 10. Energy of 100_350 datasets.
+service quality. Minimizing SLA violations is critical in fog
+and cloud computing systems, as task scheduling algorithms
+determine whether tasks can be completed within acceptable
+time constraints. High SLA violation penalties lead to poor
+user experience and inefficient resource utilization. The
+evaluation of SLA violation rates by LSTM, GGCN, DQN,
+and FLDQN on small datasets (100-350 tasks), medium-sized
+datasets (400-650 tasks), and large datasets (700-1000 tasks).
+The evaluation shows that FLDQN consistently performed
+FIGURE 11. Energy of 400_650 datasets.
+FIGURE 12. Energy of 700_1000 datasets.
+the lowest number of violations for all datasets and performed
+better than others in maintaining SLA-compliant behavior.
+For small datasets of 100-350 tasks, FLDQN always
+showed the lowest SLA violation rates compared to DQN,
+GGCN, and LSTM, as can be seen in Table 9. At 100 tasks,
+75486
+VOLUME 13, 2025
+P. Choppara, S. S. Mangalampalli: Adaptive Task Scheduling in Fog Computing Using Federated DQN
+TABLE 9. SLA for tasks 100–350.
+TABLE 10. SLA for tasks 400–650.
+FLDQN showed an SLA violation rate of only 6.2%, which is
+25% lower than DQN (8.3%), 34% lower than GGCN (9.4%),
+and 40% lower than LSTM (10.3%). As the number of tasks
+increases, FLDQN still has the lowest percentage of SLA
+violation rates at only 8.9% compared to 350 tasks. LSTM
+goes up to 13.4%. How FLDQN efficiently allocates more
+resources and better schedules tasks while reducing latency
+as shown in Fig:13 and improving task completion rates
+under specific SLAs.nFor datasets in the size range of 400 to
+650 tasks, FLDQN continues to outperform others in terms
+of SLA violation rates. Table 10 shows that for 400 tasks,
+FLDQN has a violation rate of 7.6%, which is 16% lower
+than DQN (9.0%), 22% lower than GGCN (9.8%), and 30%
+lower than LSTM (10.9%). This trend occurs across all task
+sizes, with FLDQN showing a lower SLA violation rate than
+the others. At 650 tasks, the SLA violation rate for FLDQN
+is 10.4%, which is lower than LSTM, DQN, and GGCN,
+which are 13.1%, 11.5%, and 12.3%, respectively as shown
+in Fig:14.
+FLDQN low SLA violation rates can be attributed to
+its dynamic task scheduling mechanism, where tasks are
+assigned to fog nodes based on their current load. This
+ensures that no node is overrun and tasks are completed on
+time. For large datasets (700-1000 tasks), FLDQN maintains
+its position as the algorithm with the lowest SLA violation
+rates, as shown in Table 11. With 700 tasks, FLDQN achieved
+the desired violation rate of 8.9%, outperforming the others
+by 22% compared to DQN (11.4%), GGCN (27% (12.3%),
+and LSTM (13.7%) by 35%. In terms of the number of tasks,
+FLDQN outperformed all other algorithms at 1000 tasks, the
+SLA violation rate was only 10.3%, while LSTM had already
+reached 14.6%. FLDQN’s ability to dynamically assign tasks
+to the most suitable fog nodes reduces the risks of task delays
+and, therefore, the success rate of most tasks meets their SLA
+requirements in large-scale systems with a large number of
+tasks as shown in Fig:15.
+TABLE 11. SLA for tasks 700–1000.
+FIGURE 13. SLA of 100_350 datasets.
+E. TASK REJECTION
+Task rejection occurs when a task cannot be scheduled or
+completed within the resource constraints of the system, for
+example, when there are insufficient resources (e.g., CPU,
+memory, bandwidth) or when the task exceeds the available
+computational capacity. Task rejection is a key metric for
+evaluating task scheduling algorithms, because the lower the
+rejection rates, the better the resource utilization and the
+ability to handle high task loads without failure. Therefore,
+we evaluate the task rejection rates of LSTMs, GGCNs,
+DQN, and FLDQN on small (100-350 tasks), medium (400-
+650 tasks), and large (700-1000 tasks) datasets in this paper.
+FLDQN performs well with the lowest task rejection rates
+and also outperforms others with efficient allocation of tasks
+and a robust way of balancing the load on fog nodes across
+the size of all datasets used.
+For the number of tasks in the range of 100-350,
+FLDQN shows the lowest rejection rates for tasks among
+all algorithms. As illustrated in Table 12, at 100 tasks, the
+VOLUME 13, 2025
+75487
+P. Choppara, S. S. Mangalampalli: Adaptive Task Scheduling in Fog Computing Using Federated DQN
+FIGURE 14. SLA of 400_650 datasets.
+FIGURE 15. SLA of 700_1000 datasets.
+FLDQN rejection rate is 22.6%, which is 17.4% lower than
+DQN (27.4%) and 28.5% lower than GGCN (31.31.)), and
+as the number of tasks increases, FLDQN maintains the
+lowest rejection rates, 36.1% lower than LSTM (35.8%).
+At 350 tasks, the FLDQN rejection rate is 12.3%, while
+TABLE 12. Task rejection for tasks 100–350.
+TABLE 13. Task rejection for tasks 400–650.
+LSTM reaches 19.2%. The dynamic resource allocation
+strategy accounts for the better performance of FLDQN
+in reducing the rejection rate as shown in Fig:16. Task
+overload and its rejection rate are also reduced by FLDQN
+by efficiently assigning its tasks to less loaded nodes even
+as the number of tasks increases. On medium-sized datasets
+(400-650 tasks), FLDQN still outperforms other algorithms
+in terms of task rejection. As shown in Table 13, at 400 tasks,
+FLDQN achieves a rejection rate of 9.6%, which is 15%
+lower than DQN (11.3%), 26.7% lower than GGCN (13.1%),
+and 35.3% lower than LSTM (14.9%). This trend continues
+across all task sizes, where FLDQN consistently has the
+lowest rejection rates. At 650 tasks, FLDQN has a rejection
+rate of 12.5%, LSTM 20.4%, DQN 15.5%, and GGCN
+17.9%. FLDQN’s adaptive scheduling mechanism distributes
+tasks based on node load and resource availability, which
+makes it less likely to reject tasks due to resource as shown
+in Fig:17
+For large-scale datasets (700-1000 tasks), FLDQN still
+leads with the lowest task rejection rates. As can be seen in
+Table 14, over 700 tasks, the FLDQN rejection rate is 9.7%,
+which is 17.8% lower than DQN (11.8%), 28.8% lower than
+GGCN ( 13.6) %), and 37.4% lower than LSTM (15.5%).
+For more tasks, FLDQN continues to achieve lower rejection
+rates. This is a task rejection rate of 11.7% per 1000 tasks for
+FLDQN, while LSTM, DQN, and GGCN have 19.9, 15.1,
+and 17.3%, respectively.The reason why FLDQN reduces the
+level of task rejections in heavy environments is its better
+resource management strategy and task allocation as shown in
+Fig:18. FLDQN balances the workload between nodes while
+preventing overloading tasks and improving the chances of
+tasks succeeding.
+F. THROUGHPUT
+Throughput is considered one of the most important
+performance metrics in cloud and fog computing, which
+75488
+VOLUME 13, 2025
+P. Choppara, S. S. Mangalampalli: Adaptive Task Scheduling in Fog Computing Using Federated DQN
+TABLE 14. Task rejection for tasks 700–1000.
+FIGURE 16. Task rejection rate of 100_350 datasets.
+refers to the number of tasks completed per unit time.
+The ability to complete a greater number of tasks per unit
+time is synonymous with better efficiency in the system.
+This research considers four different scheduling algorithms,
+namely LSTM, GGCN, DQN and FLDQN, over three
+datasets small (100–350 tasks), medium (400–650 tasks)
+and large (700–1000 tasks). This, in turn, reflects the scale
+and performance characteristics of these algorithms, such as
+efficiency in terms of processing, workload, etc. For small
+datasets (100–350 tasks), FLDQN outperforms all algorithms
+in terms of throughput. In the table1519 across all task
+sizes, FLDQN showed the highest throughput FLDQN high
+throughput on small datasets is because it can dynamically
+assign tasks to the most available nodes, thereby reducing
+idle times and increasing the overall task completion rate.
+In this way, FLDQN can process more tasks in a given
+time frame by managing resources efficiently. As can be
+seen in the medium dataset size (400–650 tasks), FLDQN
+continues to outperform other algorithms in throughput,
+with the gap between FLDQN and DQN narrowing slightly
+FIGURE 17. Task rejection rate of 400_650 datasets.
+FIGURE 18. Task rejection rate of 700_1000 datasets.
+at higher task loads. In Table 16 20 across all task sizes
+FLDQN shown the highest throughput. For larger datasets
+(700–1000 tasks), FLDQN is still the best throughput
+outperformer, but the performance gap between FLDQN
+and FLDQN is decreasing. And DQN is even narrower.
+VOLUME 13, 2025
+75489
+P. Choppara, S. S. Mangalampalli: Adaptive Task Scheduling in Fog Computing Using Federated DQN
+FIGURE 19. Throughput of 100_350 datasets.
+TABLE 15. Throughput of small datasets.
+TABLE 16. Throughput of medium datasets.
+TABLE 17. Throughput of large datasets.
+As illustrated in Table 17, Fig:21 FLDQN can achieve
+increasing throughput even when the number of tasks
+increases significantly.
+FIGURE 20. Throughput of 400_650 datasets.
+FIGURE 21. Throughput of 700_1000 datasets.
+VI. CONCLUSION
+This paper presents a comprehensive task scheduling frame-
+work for distributed fog computing using Federated Deep
+Queue-Learning (FLDQN). By federating and combin-
+ing reinforcement learning, FLDQN enables decentralized,
+75490
+VOLUME 13, 2025
+P. Choppara, S. S. Mangalampalli: Adaptive Task Scheduling in Fog Computing Using Federated DQN
+adaptive scheduling to overcome issues such as latency,
+resource heterogeneity, and SLA compliance. The model
+improves task allocation through localized learning at fog
+nodes, thereby eliminating bottlenecks and optimizing per-
+formance. The main contribution here is the use of K-means
+clustering for task ordering in terms of urgency and required
+resources. Only critical tasks are processed first, so SLA vio-
+lations as well as task rejection rates are reduced. Federated
+learning updates local models cooperatively, ensuring that
+data confidentiality is maintained with minimal communi-
+cation overhead. Experimental results FLDQN outperforms
+DQN and GGCN across all dataset sizes. FLDQN achieves
+a 25-35% makespan improvement for small datasets of
+100-350 tasks, a 28% improvement for medium datasets of
+400-650 tasks, and up to 30% improvement for large datasets
+of 700-1000 tasks. In addition to makespan reduction,
+FLDQN reduces SLA violations by 22-30% and task
+rejection rate by 20-27%, ensuring more tasks are completed
+within deadline constraints. Distributing workloads across
+fog nodes to improve system performance increases model
+throughput by 18-25%. It also contributes to energy effi-
+ciency by reducing consumption by 15-20% by dynamically
+assigning tasks to less loaded and more energy-efficient
+nodes. FLDQN improves throughput, reduces energy con-
+sumption, and efficiently distributes workloads across fog
+nodes, thereby demonstrating scalability for real-time appli-
+cations such as smart cities and industrial automation.
+Advanced methods for clustering, multi-objective optimiza-
+tion, dynamic scaling of resources, real-world deployment,
+and hybrid models of learning. All these advances will
+improve the adaptability and efficiency of FLDQN in
+distributed environments for scalable and privacy-preserving
+task scheduling in the future.
+REFERENCES
+[1] S. Shukla, M. F. Hassan, D. C. Tran, R. Akbar, I. V. Paputungan,
+and M. K. Khan, ‘‘Improving latency in Internet-of-Things and cloud
+computing for real-time data transmission: A systematic literature review
+(SLR),’’ Cluster Comput., vol. 26, no. 5, pp. 2657–2680, Oct. 2023.
+[2] D. P. Gulotta, ‘‘Real time, dynamic cloud offloading for self-driving
+vehicles with secure and reliable automatic switching between local and
+edge computing,’’ Ph.D. dissertation, Dept. Comput. Sci. Eng., Politecnico
+di Torino, Turin, Italy, 2023.
+[3] H. Kopetz and W. Steiner, ‘‘Cloud and fog computing,’’ in Real-Time
+Systems: Design Principles for Distributed Embedded Applications. Cham,
+Switzerland: Springer, 2022, pp. 343–365.
+[4] M. A. Shahid, N. Islam, M. M. Alam, M. M. Su’ud, and S. Musa, ‘‘A
+comprehensive study of load balancing approaches in the cloud computing
+environment and a novel fault tolerance approach,’’ IEEE Access, vol. 8,
+pp. 130500–130526, 2020.
+[5] S. P. Singh, A. Nayyar, R. Kumar, and A. Sharma, ‘‘Fog computing: From
+architecture to edge computing and big data processing,’’ J. Supercomput.,
+vol. 75, no. 4, pp. 2070–2105, Apr. 2019.
+[6] M. Verma, N. Bhardwaj, and A. K. Yadav, ‘‘Real time efficient scheduling
+algorithm for load balancing in fog computing environment,’’ Int. J. Inf.
+Technol. Comput. Sci., vol. 8, no. 4, pp. 1–10, Apr. 2016.
+[7] Q. Fan and N. Ansari, ‘‘Towards workload balancing in fog computing
+empowered IoT,’’ IEEE Trans. Netw. Sci. Eng., vol. 7, no. 1, pp. 253–262,
+Jan. 2020.
+[8] S. Mishra and J. Manda, ‘‘Improving real-time analytics through the
+Internet of Things and data processing at the network edge,’’ J. AI-Assist.
+Sci. Discovery, vol. 4, no. 1, pp. 184–206, 2024.
+[9] H. Muhammad Fahad Noman, K. Dimyati, K. Ariffin Noordin, E. Hanafi,
+and A. Abdrabou, ‘‘FeDRL-D2D: Federated deep reinforcement learning-
+empowered resource allocation scheme for energy efficiency max-
+imization in D2D-assisted 6G networks,’’ IEEE Access, vol. 12,
+pp. 109775–109792, 2024.
+[10] T. Xu, Y. Liu, Z. Ma, Y. Huang, and P. Liu, ‘‘A DQN-based multi-objective
+participant selection for efficient federated learning,’’ Future Internet,
+vol. 15, no. 6, p. 209, Jun. 2023.
+[11] M. Abd Elaziz, L. Abualigah, and I. Attiya, ‘‘Advanced optimization
+technique for scheduling IoT tasks in cloud-fog computing environments,’’
+Future Gener. Comput. Syst., vol. 124, pp. 142–154, Nov. 2021.
+[12] E. Hosseini, M. Nickray, and S. Ghanbari, ‘‘Optimized task scheduling
+for cost-latency trade-off in mobile fog computing using fuzzy analytical
+hierarchy process,’’ Comput. Netw., vol. 206, Apr. 2022, Art. no. 108752.
+[13] S. Seifhosseini, M. Hosseini Shirvani, and Y. Ramzanpoor, ‘‘Multi-
+objective cost-aware bag-of-tasks scheduling optimization model for IoT
+applications running on heterogeneous fog environment,’’ Comput. Netw.,
+vol. 240, Feb. 2024, Art. no. 110161.
+[14] S. Swarup, E. M. Shakshuki, and A. Yasar, ‘‘Energy efficient task schedul-
+ing in fog environment using deep reinforcement learning approach,’’ Proc.
+Comput. Sci., vol. 191, pp. 65–75, Jan. 2021.
+[15] M. Abdel-Basset, R. Mohamed, K. M. Sallam, and I. M. Hezam, ‘‘Multi-
+objective task scheduling method for cyber–physical–social systems in fog
+computing,’’ Knowl.-Based Syst., vol. 280, Nov. 2023, Art. no. 111009.
+[16] R. Ghafari and N. Mansouri, ‘‘E-AVOA-TS: Enhanced African vultures
+optimization algorithm-based task scheduling strategy for fog–cloud
+computing,’’ Sustain. Comput., Informat. Syst., vol. 40, Dec. 2023,
+Art. no. 100918.
+[17] B. M. Nguyen, H. T. T. Binh, T. T. Anh, and D. B. Son, ‘‘Evolutionary
+algorithms to optimize task scheduling problem for the IoT based bag-of-
+tasks application in cloud–fog computing environment,’’ Appl. Sci., vol. 9,
+no. 9, p. 1730, Apr. 2019.
+[18] S. Ghanavati, J. Abawajy, and D. Izadi, ‘‘Automata-based dynamic fault
+tolerant task scheduling approach in fog computing,’’ IEEE Trans. Emerg.
+Topics Comput., vol. 10, no. 1, pp. 488–499, Jan. 2022.
+[19] M. K. Hussein and M. H. Mousa, ‘‘Efficient task offloading for IoT-
+based applications in fog computing using ant colony optimization,’’ IEEE
+Access, vol. 8, pp. 37191–37201, 2020.
+[20] M. Abdel-Basset, D. El-Shahat, M. Elhoseny, and H. Song, ‘‘Energy-aware
+Metaheuristic algorithm for industrial-Internet-of-Things task scheduling
+problems in fog computing applications,’’ IEEE Internet Things J., vol. 8,
+no. 16, pp. 12638–12649, Aug. 2021.
+[21] S. Cao, Z. Zhan, C. Dai, S. Chen, W. Zhang, and Z. Han, ‘‘Delay-aware
+and energy-efficient IoT task scheduling algorithm with double blockchain
+enabled in cloud–fog collaborative networks,’’ IEEE Internet Things J.,
+vol. 11, no. 2, pp. 3003–3016, Jan. 2024.
+[22] R. Saha, S. Misra, and P. K. Deb, ‘‘FogFL: Fog-assisted federated learning
+for resource-constrained IoT devices,’’ IEEE Internet Things J., vol. 8,
+no. 10, pp. 8456–8463, May 2021.
+[23] X. Zhao and C. Huang, ‘‘Microservice based computational offloading
+framework and cost efficient task scheduling algorithm in heterogeneous
+fog cloud network,’’ IEEE Access, vol. 8, pp. 56680–56694, 2020.
+[24] F. A. Saif, R. Latip, Z. M. Hanapi, and K. Shafinah, ‘‘Multi-objective grey
+wolf optimizer algorithm for task scheduling in cloud-fog computing,’’
+IEEE Access, vol. 11, pp. 20635–20646, 2023.
+[25] S. P. Singh, A. Nayyar, H. Kaur, and A. Singla, ‘‘Dynamic task
+scheduling using balanced VM allocation policy for fog computing
+platforms,’’ Scalable Comput., Pract. Exper., vol. 20, no. 2, pp. 433–456,
+May 2019.
+[26] R. Madhura, B. L. Elizabeth, and V. R. Uthariaraj, ‘‘An improved list-based
+task scheduling algorithm for fog computing environment,’’ Computing,
+vol. 103, no. 7, pp. 1353–1389, Jul. 2021.
+[27] A. Najafizadeh, A. Salajegheh, A. M. Rahmani, and A. Sahafi, ‘‘Multi-
+objective task scheduling in cloud-fog computing using goal programming
+approach,’’ Cluster Comput., vol. 25, no. 1, pp. 141–165, Feb. 2022.
+[28] J. Wang and D. Li, ‘‘Task scheduling based on a hybrid heuristic algorithm
+for smart production line with fog computing,’’ Sensors, vol. 19, no. 5,
+p. 1023, Feb. 2019.
+[29] M. Hussain, S. Nabi, and M. Hussain, ‘‘RAPTS: Resource aware
+prioritized task scheduling technique in heterogeneous fog computing
+environment,’’ Cluster Comput., vol. 27, no. 9, pp. 13353–13377,
+Dec. 2024.
+VOLUME 13, 2025
+75491
+P. Choppara, S. S. Mangalampalli: Adaptive Task Scheduling in Fog Computing Using Federated DQN
+[30] K. Alatoun, K. Matrouk, M. A. Mohammed, J. Nedoma, R. Martinek,
+and P. Zmij, ‘‘A novel low-latency and energy-efficient task scheduling
+framework for Internet of Medical Things in an edge fog cloud system,’’
+Sensors, vol. 22, no. 14, p. 5327, Jul. 2022.
+[31] M. S. Kumar and G. R. Karri, ‘‘EEOA: Cost and energy efficient task
+scheduling in a cloud-fog framework,’’ Sensors, vol. 23, no. 5, p. 2445,
+Feb. 2023.
+[32] W. Zhu, M. Goudarzi, and R. Buyya, ‘‘FLight: A lightweight federated
+learning framework in edge and fog computing,’’ Software: Pract. Exper.,
+vol. 54, no. 5, pp. 813–841, May 2024.
+[33] S. Wang, T. Zhao, and S. Pang, ‘‘Task scheduling algorithm based on
+improved firework algorithm in fog computing,’’ IEEE Access, vol. 8,
+pp. 32385–32394, 2020.
+[34] W.-C. Yeh, C.-M. Lai, and K.-C. Tseng, ‘‘Fog computing task scheduling
+optimization based on multi-objective simplified swarm optimization,’’ J.
+Phys., Conf. Ser., vol. 1411, no. 1, Nov. 2019, Art. no. 012007.
+[35] X. Tang, F. Liu, D. Xu, J. Jiang, Q. Tang, B. Wang, Q. Wu, and
+C. L. P. Chen, ‘‘LLM-assisted reinforcement learning: Leveraging
+lightweight large language model capabilities for efficient task scheduling
+in multi-cloud environment,’’ IEEE Trans. Consum. Electron., early access,
+Jan. 1, 2025, doi: 10.1109/TCE.2024.3524612.
+[36] A. Jayanetti, S. Halgamuge, and R. Buyya, ‘‘Multi-agent deep rein-
+forcement learning framework for renewable energy-aware workflow
+scheduling on distributed cloud data centers,’’ IEEE Trans. Parallel Distrib.
+Syst., vol. 35, no. 4, pp. 604–615, Apr. 2024.
+[37] X. Tang, F. Liu, B. Wang, D. Xu, J. Jiang, Q. Wu, and C. L. P. Chen,
+‘‘Workflow scheduling based on asynchronous advantage actor–critic
+algorithm in multi-cloud environment,’’ Expert Syst. Appl., vol. 258,
+Dec. 2024, Art. no. 125245.
+[38] A. Hussain and M. Aleem, ‘‘GoCJ: Google cloud jobs dataset for
+distributed and cloud computing infrastructures,’’ Data, vol. 3, no. 4, p. 38,
+Sep. 2018.
+PRASHANTH CHOPPARA received the B.Tech.
+degree
+from
+Acharya
+Nagarjuna
+University,
+in 2018, and the M.Tech. degree from JNTUK
+University, in 2021. He is currently pursuing the
+Ph.D. degree with the School of Computer Science
+and Engineering (SCOPE), VIT-AP University,
+Andhra Pradesh, India. His research interests
+include cloud computing, fog computing, machine
+learning,
+deep
+learning,
+and
+reinforcement
+learning.
+S. SUDHEER MANGALAMPALLI (Senior Mem-
+ber, IEEE) is currently an Associate Professor
+with the Department of Computer Science and
+Engineering, Manipal Institute of Technology
+Bengaluru, Manipal Academy of Higher Educa-
+tion known as MAHE (Institution of Eminence,
+Deemed to be University). He is a passionate
+Researcher. Toward his profile, he has 48 pub-
+lications, which are indexed in Scopus and
+SCI databases. He authored three textbooks. His
+research interests include scheduling in cloud computing, edge computing,
+and fog computing. He is a member of The Institution of Engineers. He is an
+active reviewer of various SCI-indexed journals.
+75492
+VOLUME 13, 2025
